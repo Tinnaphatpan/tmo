@@ -20,6 +20,7 @@ import { AdminAuditLogController } from './admin-audit-log.controller';
 import { AdminDashboardController } from './admin-dashboard.controller';
 import { AdminUsersController } from './admin-users.controller';
 import { AdminStaffController } from './admin-staff.controller';
+import { AdminPermissionsController } from './admin-permissions.controller';
 
 import { ManageSchoolsUseCase } from './use-cases/manage-schools.use-case';
 import { ManageCommitteeUseCase } from './use-cases/manage-committee.use-case';
@@ -30,6 +31,7 @@ import { StudentImportUseCase } from './student-import/student-import.use-case';
 import { UploadSignatureUseCase } from './use-cases/upload-signature.use-case';
 import { ManageStaffAssignmentsUseCase } from './use-cases/manage-staff.use-case';
 import { ListStaffUseCase } from './use-cases/list-staff.use-case';
+import { GetPermissionMatrixUseCase } from './use-cases/get-permission-matrix.use-case';
 
 @Module({
   imports: [
@@ -55,6 +57,7 @@ import { ListStaffUseCase } from './use-cases/list-staff.use-case';
     AdminDashboardController,
     AdminUsersController,
     AdminStaffController,
+    AdminPermissionsController,
   ],
   providers: [
     ManageSchoolsUseCase,
@@ -66,6 +69,7 @@ import { ListStaffUseCase } from './use-cases/list-staff.use-case';
     UploadSignatureUseCase,
     ManageStaffAssignmentsUseCase,
     ListStaffUseCase,
+    GetPermissionMatrixUseCase,
   ],
 })
 export class AdminModule {}

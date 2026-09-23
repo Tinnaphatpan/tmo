@@ -1,0 +1,3 @@
+# Old system's production data backup — contains real password hashes and
+# student/school PII. Never publish this to the (public) GitHub repo.
+backup/

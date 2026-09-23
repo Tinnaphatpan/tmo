@@ -1,0 +1,49 @@
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { CommitteeAssignmentRepository } from '../../committee/committee-assignment.repository';
+import { QueueRepository } from '../queue.repository';
+
+/**
+ * SPEC §2.5/§2.6 — POST /api/queue/[id]/claim
+ * Order of checks matches the spec's documented error precedence:
+ *   403 not assigned this problem → 409 already holding another item →
+ *   409 lost the race to another judge.
+ */
+@Injectable()
+export class ClaimQueueItemUseCase {
+  constructor(
+    private readonly queueRepository: QueueRepository,
+    private readonly committeeAssignmentRepository: CommitteeAssignmentRepository,
+  ) {}
+
+  async execute(userId: string, queueItemId: string): Promise<void> {
+    const item = await this.queueRepository.findById(queueItemId);
+    if (!item) {
+      throw new NotFoundException('ไม่พบรายการคิวนี้');
+    }
+
+    const assignedProblems =
+      await this.committeeAssignmentRepository.findProblemNumbersByUser(userId);
+    if (!assignedProblems.includes(item.problemNumber)) {
+      throw new ForbiddenException('คุณไม่ได้รับมอบหมายให้ตรวจข้อนี้');
+    }
+
+    const activeClaim = await this.queueRepository.findActiveClaimByUser(userId);
+    if (activeClaim) {
+      throw new ConflictException('คุณกำลังตรวจอีกรายการอยู่ กรุณาส่งคะแนนหรือคืนคิวก่อน');
+    }
+
+    // The real race guard: an atomic conditional UPDATE at the DB layer
+    // (WHERE Status='WAITING' AND ClaimedByUserId IS NULL). Everything above
+    // is just producing a friendlier error for the common case — this call
+    // is what actually decides who wins when two judges click at once.
+    const claimed = await this.queueRepository.claim(queueItemId, userId);
+    if (!claimed) {
+      throw new ConflictException('รายการนี้ถูกกรรมการท่านอื่นรับตรวจไปแล้ว');
+    }
+  }
+}

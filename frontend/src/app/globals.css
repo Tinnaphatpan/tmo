@@ -1,0 +1,223 @@
+@import "tailwindcss";
+
+/*
+ * Design system (SPEC.md §3, "KMUTNB" theme).
+ * Vermilion (saed) is an accent only — never a large fill, except
+ * .saed-gradient which is deliberately dark enough for 4.5:1 contrast on a
+ * projector screen. Warm cream background instead of pure white, warm
+ * near-black ink instead of pure black, to reduce eye strain on displays
+ * left on all day (SPEC §5.1 /display).
+ */
+:root {
+  --background: #fbf7f2;
+  --surface: #ffffff;
+  --surface-sunken: #f5efe7;
+  --line: #ebe0d4;
+
+  --ink-900: #241e1a;
+  --ink-700: #4a413b;
+  --ink-500: #756a62;
+  --ink-300: #a2938a;
+
+  --saed-50: #fef4ef;
+  --saed-100: #fce6da;
+  --saed-200: #f8c9b0;
+  --saed-300: #f0a47d;
+  --saed-400: #e37d4f;
+  --saed-500: #c85a2e;
+  --saed-600: #b04722;
+  --saed-700: #a83d19;
+
+  /* Queue status badges: WAITING/IN_PROGRESS/DONE (SPEC §3.2) */
+  --state-queued-bg: #ede7fa;
+  --state-queued-fg: #5b4a9e;
+  --state-queued-border: #d3c5f0;
+
+  --state-active-bg: #ffe8d6;
+  --state-active-fg: #9a4a1d;
+  --state-active-border: #f3c79b;
+
+  --state-done-bg: #e1f5e9;
+  --state-done-fg: #276749;
+  --state-done-border: #b8e6c9;
+
+  /* Rotation schedule grid — mimics the wall poster (SPEC §3.2 ScheduleGrid) */
+  --grid-line: #d9d3e8;
+  --grid-head: #e8e3f5;
+  --grid-banner: #6d5ba6;
+  --grid-cell: #f5f3fc;
+
+  --font-sans: var(--font-noto-thai), "Noto Sans Thai", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1a1614;
+    --surface: #241e1a;
+    --surface-sunken: #14100e;
+    --line: #3a322c;
+
+    --ink-900: #f5eee6;
+    --ink-700: #d8ccc0;
+    --ink-500: #a99c90;
+    --ink-300: #6e6259;
+
+    --state-queued-bg: #332b54;
+    --state-queued-fg: #c9baf0;
+    --state-queued-border: #4a3e73;
+
+    --state-active-bg: #4a2e17;
+    --state-active-fg: #ffb27d;
+    --state-active-border: #6b4526;
+
+    --state-done-bg: #1c3b29;
+    --state-done-fg: #8fdbaa;
+    --state-done-border: #2d5940;
+
+    --grid-line: #3a3355;
+    --grid-head: #2a2440;
+    --grid-banner: #9683d4;
+    --grid-cell: #211d33;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-line: var(--line);
+
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-300: var(--ink-300);
+
+  --color-saed-50: var(--saed-50);
+  --color-saed-100: var(--saed-100);
+  --color-saed-200: var(--saed-200);
+  --color-saed-300: var(--saed-300);
+  --color-saed-400: var(--saed-400);
+  --color-saed-500: var(--saed-500);
+  --color-saed-600: var(--saed-600);
+  --color-saed-700: var(--saed-700);
+
+  --color-state-queued-bg: var(--state-queued-bg);
+  --color-state-queued-fg: var(--state-queued-fg);
+  --color-state-queued-border: var(--state-queued-border);
+  --color-state-active-bg: var(--state-active-bg);
+  --color-state-active-fg: var(--state-active-fg);
+  --color-state-active-border: var(--state-active-border);
+  --color-state-done-bg: var(--state-done-bg);
+  --color-state-done-fg: var(--state-done-fg);
+  --color-state-done-border: var(--state-done-border);
+
+  --color-grid-line: var(--grid-line);
+  --color-grid-head: var(--grid-head);
+  --color-grid-banner: var(--grid-banner);
+  --color-grid-cell: var(--grid-cell);
+
+  --font-sans: var(--font-sans);
+}
+
+html,
+body {
+  overflow-x: hidden;
+  background: var(--background);
+  color: var(--ink-900);
+}
+
+/* Vermilion is an accent everywhere except here — needs real fill + enough
+   contrast to read from across a room on a projector (SPEC §3.1). */
+.saed-gradient {
+  background: linear-gradient(135deg, var(--saed-600), var(--saed-700));
+  color: #fff7f0;
+}
+
+.card-soft {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow:
+    0 2px 8px rgba(168, 61, 25, 0.06),
+    0 1px 3px rgba(36, 30, 26, 0.06);
+}
+
+/* SPEC §3.4 — coarse-pointer (touch) devices only, so mouse/trackpad UIs
+   don't get oversized controls. Apply to interactive elements on /committee. */
+@media (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-sunken);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-300);
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pulse-gold {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(200, 90, 46, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(200, 90, 46, 0);
+  }
+}
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+.animate-pulse-gold {
+  animation: pulse-gold 2s ease-in-out infinite;
+}
+.animate-soft-pulse {
+  animation: soft-pulse 2s ease-in-out infinite;
+}

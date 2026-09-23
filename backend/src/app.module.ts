@@ -7,6 +7,7 @@ import { QueueModule } from './modules/queue/queue.module';
 import { ScoreEditRequestsModule } from './modules/scores/score-edit-requests.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { TeamLeaderModule } from './modules/team-leader/team-leader.module';
+import { ApprovalModule } from './modules/approval/approval.module';
 import { ScheduleModule } from './modules/schedule/schedule.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -20,6 +21,7 @@ import { AppService } from './app.service';
     ScoreEditRequestsModule,
     AdminModule,
     TeamLeaderModule,
+    ApprovalModule,
     ScheduleModule,
   ],
   controllers: [AppController],

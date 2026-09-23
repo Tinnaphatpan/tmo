@@ -65,6 +65,11 @@ export class GetMyQueueUseCase {
         claimedByUserId: item.claimedByUserId,
         claimedAt: item.claimedAt,
         completedAt: item.completedAt,
+        submittedByUserId: item.submittedByUserId,
+        approvalStatus: item.approvalStatus,
+        approvedByUserId: item.approvedByUserId,
+        approvedAt: item.approvedAt,
+        documentPath: item.documentPath,
         school: { id: item.schoolId, name: item.schoolName, code: item.schoolCode, students },
         scores,
       });

@@ -38,8 +38,27 @@ export abstract class QueueRepository {
    */
   abstract claim(id: string, userId: string, executor?: Executor): Promise<boolean>;
   abstract release(id: string, executor?: Executor): Promise<void>;
-  /** Requires a transaction — must always land alongside the Score writes it closes out (SPEC §1.4). */
-  abstract markDone(id: string, executor: Executor): Promise<void>;
+  /**
+   * Requires a transaction — must always land alongside the Score writes it
+   * closes out (SPEC §1.4). Closes the item as DONE and opens the approval
+   * workflow (ApprovalStatus='PENDING', SubmittedByUserId=submittedByUserId).
+   */
+  abstract markPendingApproval(
+    id: string,
+    submittedByUserId: string,
+    executor: Executor,
+  ): Promise<void>;
+  /** Requires a transaction — TEAM_LEADER approval, sets ApprovedByUserId/ApprovedAt/DocumentPath. */
+  abstract approve(
+    id: string,
+    approvedByUserId: string,
+    documentPath: string | null,
+    executor: Executor,
+  ): Promise<void>;
+  abstract findPendingApprovalBySchool(
+    schoolId: string,
+    executor?: Executor,
+  ): Promise<QueueItemWithSchool[]>;
 
   abstract create(
     input: { schoolId: string; problemNumber: number; position: number; scheduledAt: Date | null },

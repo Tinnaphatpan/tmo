@@ -20,12 +20,23 @@ interface QueueItemRow {
   ClaimedByUserId: string | null;
   ClaimedAt: Date | null;
   CompletedAt: Date | null;
+  SubmittedByUserId: string | null;
+  ApprovalStatus: QueueItem['approvalStatus'];
+  ApprovedByUserId: string | null;
+  ApprovedAt: Date | null;
+  DocumentPath: string | null;
 }
 
 interface QueueItemWithSchoolRow extends QueueItemRow {
   SchoolName: string;
   SchoolCode: string | null;
 }
+
+const QUEUE_ITEM_COLUMNS = `
+  q.Id, q.SchoolId, q.ProblemNumber, q.Status, q.Position, q.ScheduledAt,
+  q.ClaimedByUserId, q.ClaimedAt, q.CompletedAt,
+  q.SubmittedByUserId, q.ApprovalStatus, q.ApprovedByUserId, q.ApprovedAt, q.DocumentPath
+`;
 
 function toEntity(row: QueueItemRow): QueueItem {
   return {
@@ -38,6 +49,11 @@ function toEntity(row: QueueItemRow): QueueItem {
     claimedByUserId: row.ClaimedByUserId,
     claimedAt: row.ClaimedAt,
     completedAt: row.CompletedAt,
+    submittedByUserId: row.SubmittedByUserId,
+    approvalStatus: row.ApprovalStatus,
+    approvedByUserId: row.ApprovedByUserId,
+    approvedAt: row.ApprovedAt,
+    documentPath: row.DocumentPath,
   };
 }
 
@@ -46,8 +62,7 @@ function toEntityWithSchool(row: QueueItemWithSchoolRow): QueueItemWithSchool {
 }
 
 const SELECT_WITH_SCHOOL = `
-  SELECT q.Id, q.SchoolId, q.ProblemNumber, q.Status, q.Position, q.ScheduledAt,
-         q.ClaimedByUserId, q.ClaimedAt, q.CompletedAt,
+  SELECT ${QUEUE_ITEM_COLUMNS},
          s.Name AS SchoolName, s.Code AS SchoolCode
   FROM QueueItem q
   JOIN School s ON s.Id = q.SchoolId
@@ -89,9 +104,7 @@ export class MssqlQueueRepository extends QueueRepository {
   async findById(id: string, executor?: Executor): Promise<QueueItem | null> {
     const result = await request(this.exec(executor))
       .input('id', sql.UniqueIdentifier, id)
-      .query<QueueItemRow>(
-        'SELECT Id, SchoolId, ProblemNumber, Status, Position, ScheduledAt, ClaimedByUserId, ClaimedAt, CompletedAt FROM QueueItem WHERE Id = @id',
-      );
+      .query<QueueItemRow>(`SELECT ${QUEUE_ITEM_COLUMNS} FROM QueueItem q WHERE q.Id = @id`);
     return result.recordset[0] ? toEntity(result.recordset[0]) : null;
   }
 
@@ -106,7 +119,7 @@ export class MssqlQueueRepository extends QueueRepository {
     const result = await request(this.exec(executor))
       .input('userId', sql.UniqueIdentifier, userId)
       .query<QueueItemRow>(
-        "SELECT Id, SchoolId, ProblemNumber, Status, Position, ScheduledAt, ClaimedByUserId, ClaimedAt, CompletedAt FROM QueueItem WHERE ClaimedByUserId = @userId AND Status = 'IN_PROGRESS'",
+        `SELECT ${QUEUE_ITEM_COLUMNS} FROM QueueItem q WHERE q.ClaimedByUserId = @userId AND q.Status = 'IN_PROGRESS'`,
       );
     return result.recordset[0] ? toEntity(result.recordset[0]) : null;
   }
@@ -133,14 +146,50 @@ export class MssqlQueueRepository extends QueueRepository {
       `);
   }
 
-  async markDone(id: string, executor: Executor): Promise<void> {
+  async markPendingApproval(
+    id: string,
+    submittedByUserId: string,
+    executor: Executor,
+  ): Promise<void> {
     await request(executor)
       .input('id', sql.UniqueIdentifier, id)
+      .input('submittedByUserId', sql.UniqueIdentifier, submittedByUserId)
       .query(`
         UPDATE QueueItem
-        SET Status = 'DONE', CompletedAt = SYSUTCDATETIME()
+        SET Status = 'DONE', CompletedAt = SYSUTCDATETIME(),
+            ApprovalStatus = 'PENDING', SubmittedByUserId = @submittedByUserId
         WHERE Id = @id
       `);
+  }
+
+  async approve(
+    id: string,
+    approvedByUserId: string,
+    documentPath: string | null,
+    executor: Executor,
+  ): Promise<void> {
+    await request(executor)
+      .input('id', sql.UniqueIdentifier, id)
+      .input('approvedByUserId', sql.UniqueIdentifier, approvedByUserId)
+      .input('documentPath', sql.NVarChar, documentPath)
+      .query(`
+        UPDATE QueueItem
+        SET ApprovalStatus = 'APPROVED', ApprovedByUserId = @approvedByUserId,
+            ApprovedAt = SYSUTCDATETIME(), DocumentPath = @documentPath
+        WHERE Id = @id
+      `);
+  }
+
+  async findPendingApprovalBySchool(
+    schoolId: string,
+    executor?: Executor,
+  ): Promise<QueueItemWithSchool[]> {
+    const result = await request(this.exec(executor))
+      .input('schoolId', sql.UniqueIdentifier, schoolId)
+      .query<QueueItemWithSchoolRow>(
+        `${SELECT_WITH_SCHOOL} WHERE q.SchoolId = @schoolId AND q.ApprovalStatus = 'PENDING' ORDER BY q.ProblemNumber`,
+      );
+    return result.recordset.map(toEntityWithSchool);
   }
 
   async create(
@@ -154,9 +203,7 @@ export class MssqlQueueRepository extends QueueRepository {
       .input('scheduledAt', sql.DateTime2, input.scheduledAt)
       .query<QueueItemRow>(`
         INSERT INTO QueueItem (SchoolId, ProblemNumber, Position, ScheduledAt)
-        OUTPUT INSERTED.Id, INSERTED.SchoolId, INSERTED.ProblemNumber, INSERTED.Status,
-               INSERTED.Position, INSERTED.ScheduledAt, INSERTED.ClaimedByUserId,
-               INSERTED.ClaimedAt, INSERTED.CompletedAt
+        OUTPUT ${QUEUE_ITEM_COLUMNS.replace(/q\./g, 'INSERTED.')}
         VALUES (@schoolId, @problemNumber, @position, @scheduledAt)
       `);
     return toEntity(result.recordset[0]);

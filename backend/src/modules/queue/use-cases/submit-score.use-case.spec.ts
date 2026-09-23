@@ -42,13 +42,15 @@ function setUp() {
 const fullTeamScores = [1, 2, 3, 4, 5, 6].map((i) => ({ studentId: `s${i}`, value: 7.5 }));
 
 describe('SubmitScoreUseCase', () => {
-  it('closes the queue item and writes a paired AuditLog row per score when the team is complete', async () => {
+  it('closes the queue item as DONE-pending-approval and writes a paired AuditLog row per score when the team is complete', async () => {
     const { useCase, queueRepo, scoresRepo, auditLogRepo } = setUp();
 
     await useCase.execute({ queueItemId: 'q1', judgeId: 'judge-1', scores: fullTeamScores });
 
     const item = await queueRepo.findById('q1');
     expect(item?.status).toBe('DONE');
+    expect(item?.approvalStatus).toBe('PENDING');
+    expect(item?.submittedByUserId).toBe('judge-1');
     expect(scoresRepo.scores).toHaveLength(6);
     expect(auditLogRepo.entries).toHaveLength(6);
     expect(auditLogRepo.entries.every((e) => e.entityType === 'Score')).toBe(true);

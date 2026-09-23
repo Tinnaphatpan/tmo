@@ -23,7 +23,8 @@ export interface SubmitScoreInput {
  * this item → submitted roster is exactly the school's roster (SPEC §2.6
  * "เทียบ Set studentId ที่คาดไว้ ... ต้องเท่ากันเป๊ะ") → then, in one
  * transaction: upsert every Score, write one AuditLog row per Score, close
- * the QueueItem out as DONE.
+ * the QueueItem out as DONE with ApprovalStatus=PENDING (awaiting the
+ * school's TEAM_LEADER approval — see modules/approval).
  */
 @Injectable()
 export class SubmitScoreUseCase {
@@ -90,7 +91,7 @@ export class SubmitScoreUseCase {
           tx,
         );
       }
-      await this.queueRepository.markDone(input.queueItemId, tx);
+      await this.queueRepository.markPendingApproval(input.queueItemId, input.judgeId, tx);
     });
   }
 }

@@ -5,6 +5,9 @@ export type Role = 'ADMIN' | 'COMMITTEE' | 'STAFF' | 'TEAM_LEADER';
 
 export type QueueStatus = 'WAITING' | 'IN_PROGRESS' | 'DONE';
 
+/** Orthogonal to QueueStatus — only meaningful once Status='DONE'. */
+export type ApprovalStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED';
+
 export type ScoreEditRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface School {
@@ -41,6 +44,11 @@ export interface QueueItem {
   claimedByUserId: string | null;
   claimedAt: Date | null;
   completedAt: Date | null;
+  submittedByUserId: string | null;
+  approvalStatus: ApprovalStatus;
+  approvedByUserId: string | null;
+  approvedAt: Date | null;
+  documentPath: string | null;
 }
 
 export interface Student {

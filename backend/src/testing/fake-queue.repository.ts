@@ -66,11 +66,28 @@ export class FakeQueueRepository extends QueueRepository {
     item.claimedAt = null;
   }
 
-  async markDone(id: string): Promise<void> {
+  async markPendingApproval(id: string, submittedByUserId: string): Promise<void> {
     const item = this.items.find((i) => i.id === id);
     if (!item) return;
     item.status = 'DONE';
     item.completedAt = new Date();
+    item.approvalStatus = 'PENDING';
+    item.submittedByUserId = submittedByUserId;
+  }
+
+  async approve(id: string, approvedByUserId: string, documentPath: string | null): Promise<void> {
+    const item = this.items.find((i) => i.id === id);
+    if (!item) return;
+    item.approvalStatus = 'APPROVED';
+    item.approvedByUserId = approvedByUserId;
+    item.approvedAt = new Date();
+    item.documentPath = documentPath;
+  }
+
+  async findPendingApprovalBySchool(schoolId: string): Promise<QueueItemWithSchool[]> {
+    return this.items
+      .filter((i) => i.schoolId === schoolId && i.approvalStatus === 'PENDING')
+      .map((i) => ({ ...i, schoolName: 'x', schoolCode: null }));
   }
 
   async create(input: {
@@ -89,6 +106,11 @@ export class FakeQueueRepository extends QueueRepository {
       claimedByUserId: null,
       claimedAt: null,
       completedAt: null,
+      submittedByUserId: null,
+      approvalStatus: 'NOT_SUBMITTED',
+      approvedByUserId: null,
+      approvedAt: null,
+      documentPath: null,
     };
     this.items.push(item);
     return item;
@@ -159,6 +181,11 @@ export function makeQueueItem(overrides: Partial<QueueItem> = {}): QueueItem {
     claimedByUserId: null,
     claimedAt: null,
     completedAt: null,
+    submittedByUserId: null,
+    approvalStatus: 'NOT_SUBMITTED',
+    approvedByUserId: null,
+    approvedAt: null,
+    documentPath: null,
     ...overrides,
   };
 }

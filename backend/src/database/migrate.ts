@@ -57,6 +57,19 @@ async function getAppliedMigrations(
   return new Set(result.recordset.map((r) => r.Filename));
 }
 
+/**
+ * Splits on lines containing only `GO` (case-insensitive), sqlcmd/SSMS-style.
+ * Needed because SQL Server won't let a later statement in the same batch
+ * reference a column an earlier `ALTER TABLE ... ADD` statement just added —
+ * unlike `CREATE TABLE`, that metadata isn't visible until the next batch.
+ */
+function splitBatches(sqlText: string): string[] {
+  return sqlText
+    .split(/^\s*GO\s*$/im)
+    .map((b) => b.trim())
+    .filter((b) => b.length > 0);
+}
+
 async function runMigration(
   pool: sql.ConnectionPool,
   filename: string,
@@ -65,7 +78,9 @@ async function runMigration(
   const transaction = new sql.Transaction(pool);
   await transaction.begin();
   try {
-    await new sql.Request(transaction).batch(sqlText);
+    for (const batch of splitBatches(sqlText)) {
+      await new sql.Request(transaction).batch(batch);
+    }
     await new sql.Request(transaction)
       .input('filename', sql.NVarChar, filename)
       .query(

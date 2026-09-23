@@ -38,8 +38,10 @@ export class ManageQueueUseCase {
     }
 
     const neighbour = siblings[neighbourIndex];
-    await this.queueRepository.updatePosition(item.id, neighbour.position);
-    await this.queueRepository.updatePosition(neighbour.id, item.position);
+    const itemPosition = item.position;
+    const neighbourPosition = neighbour.position;
+    await this.queueRepository.updatePosition(item.id, neighbourPosition);
+    await this.queueRepository.updatePosition(neighbour.id, itemPosition);
   }
 
   async remove(id: string): Promise<void> {

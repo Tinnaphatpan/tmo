@@ -13,6 +13,7 @@ import { GetPublicQueueUseCase } from './use-cases/get-public-queue.use-case';
 import { GetMyQueueUseCase } from './use-cases/get-my-queue.use-case';
 import { ClaimQueueItemUseCase } from './use-cases/claim-queue-item.use-case';
 import { ReleaseQueueItemUseCase } from './use-cases/release-queue-item.use-case';
+import { SkipQueueItemUseCase } from './use-cases/skip-queue-item.use-case';
 import { SubmitScoreUseCase } from './use-cases/submit-score.use-case';
 
 @Module({
@@ -32,6 +33,7 @@ import { SubmitScoreUseCase } from './use-cases/submit-score.use-case';
     GetMyQueueUseCase,
     ClaimQueueItemUseCase,
     ReleaseQueueItemUseCase,
+    SkipQueueItemUseCase,
     SubmitScoreUseCase,
   ],
   exports: [QueueRepository],

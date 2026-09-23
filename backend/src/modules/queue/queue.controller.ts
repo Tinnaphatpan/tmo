@@ -21,6 +21,7 @@ import { GetPublicQueueUseCase, PublicQueueResult } from './use-cases/get-public
 import { GetMyQueueUseCase, MyQueueResult } from './use-cases/get-my-queue.use-case';
 import { ClaimQueueItemUseCase } from './use-cases/claim-queue-item.use-case';
 import { ReleaseQueueItemUseCase } from './use-cases/release-queue-item.use-case';
+import { SkipQueueItemUseCase } from './use-cases/skip-queue-item.use-case';
 import { SubmitScoreUseCase } from './use-cases/submit-score.use-case';
 import { SubmitScoreDto } from './dto/submit-score.dto';
 
@@ -33,6 +34,7 @@ export class QueueController {
     private readonly getMyQueue: GetMyQueueUseCase,
     private readonly claimQueueItem: ClaimQueueItemUseCase,
     private readonly releaseQueueItem: ReleaseQueueItemUseCase,
+    private readonly skipQueueItem: SkipQueueItemUseCase,
     private readonly submitScore: SubmitScoreUseCase,
     private readonly realtimeService: RealtimeService,
   ) {}
@@ -88,6 +90,20 @@ export class QueueController {
     @Body() dto: SubmitScoreDto,
   ): Promise<{ ok: true }> {
     await this.submitScore.execute({ queueItemId: id, judgeId: user.id, scores: dto.scores });
+    this.realtimeService.notifyChange();
+    return { ok: true };
+  }
+
+  // Release + move to the end of this problem's queue (Phase B5).
+  @Post(':id/skip')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('COMMITTEE', 'STAFF')
+  @HttpCode(HttpStatus.OK)
+  async skip(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+  ): Promise<{ ok: true }> {
+    await this.skipQueueItem.execute({ queueItemId: id, userId: user.id });
     this.realtimeService.notifyChange();
     return { ok: true };
   }

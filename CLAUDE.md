@@ -25,18 +25,19 @@ Four foundational decisions were confirmed with the user and are already impleme
 - **F2** — approval UI: `team-leader/approvals/page.tsx` (pending list, approve-and-sign, PDF link after approval, score table for context), `StatusBadge` `PENDING_APPROVAL`/`APPROVED` + `--state-pending-approval-*` tokens, `ScoreForm` copy → "ส่งคะแนนเพื่อรออนุมัติ", committee done-list shows approval badge. Only pending items are listable (no backend endpoint for already-approved ones), so the page shows PDF links only for approvals made in the current session
 - **F3** — `staff/page.tsx`: Call Next (claims lowest-`position` WAITING item from `/queue/mine`), Skip (`/queue/:id/skip`), Return, Mark Complete via `ScoreForm`; live via SSE. Skip is staff-only in the UI for now (backend also allows COMMITTEE)
 - **F4** — `admin/committee/page.tsx` rewritten as unified "ผู้ใช้และสิทธิ์" page (route unchanged): role tabs, reads `/admin/permissions` + `/admin/schools`; COMMITTEE = problem picker, STAFF = `ProblemSchoolMatrix` rows (problem + school or all); create/edit/delete via `/admin/committee|staff`; per-user signature upload to `/admin/users/:id/signature`. TEAM_LEADER tab is signature-only (no backend CRUD for creating/deleting team leaders exists)
+- **F5** — `components/Watermark.tsx` (fixed tiled SVG overlay of name · role · server timestamp, `--watermark-opacity` token, print-hidden) mounted in committee/staff/team-leader layouts (now async, read `getSession()`); backend `GET /scoreboard` (`COMMITTEE`/`STAFF`, `modules/scoreboard/`) + `committee/scoreboard/page.tsx` — first-pass per-school × per-problem sums, alphabetical, no ranking (design docs do not specify one), all schools visible, not filtered to the caller's assignments. No scoreboard nav entry for STAFF yet
 - **B4** — `STAFF` delegation: queue claim/submit/score-edit-request now accept `STAFF` within their `UserAssignment` scope (zero role-branching needed — same `(problemNumber, schoolId-null-or-match)` predicate serves both `COMMITTEE` and `STAFF`); `admin/staff` CRUD
 
 **Known temporary gap, left as-is on purpose**: `frontend/src/app/admin/score-edit-requests/page.tsx` still calls the endpoint B3 removed (moved to `team-leader/score-edit-requests`) — it will 403 until the matching frontend phase rebuilds it as a Team Leader page. Don't "fix" this piecemeal; it's scheduled.
 
 **Still to do** (full detail in the plan file):
-- **F5** Scoreboard + Watermark (new component, new page) → **F6** Save Draft (client-only)
+- **F6** Save Draft (client-only)
 - Frontend theme swap (KMUTNB Red `#C8102E` + Slate `#0F172A`, no dark mode) was already done and verified in an earlier session — don't redo it, just build new UI against the tokens already in `frontend/src/app/globals.css`.
 
 **To resume this work in a new chat, say:**
-> Continue the role-model refactor — read `C:\Users\Tinnaphat\.claude\plans\joyful-cuddling-lamport.md` and the "Active refactor in progress" section of CLAUDE.md, then keep going on Phase F5.
+> Continue the role-model refactor — read `C:\Users\Tinnaphat\.claude\plans\joyful-cuddling-lamport.md` and the "Active refactor in progress" section of CLAUDE.md, then keep going on Phase F6.
 
-(Swap "F5" for whichever phase is next once more land — update this line and the phase lists above as you go.)
+(Swap "F6" for whichever phase is next once more land — update this line and the phase lists above as you go.)
 
 ## What this is
 

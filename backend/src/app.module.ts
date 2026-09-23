@@ -10,6 +10,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { TeamLeaderModule } from './modules/team-leader/team-leader.module';
 import { ApprovalModule } from './modules/approval/approval.module';
 import { ScheduleModule } from './modules/schedule/schedule.module';
+import { ScoreboardModule } from './modules/scoreboard/scoreboard.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -25,6 +26,7 @@ import { AppService } from './app.service';
     TeamLeaderModule,
     ApprovalModule,
     ScheduleModule,
+    ScoreboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

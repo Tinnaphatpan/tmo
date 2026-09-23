@@ -4,6 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Read this file in full before creating or editing `.claude/settings.json`** (permissions, hooks, etc.) — settings should respect the architecture and constraints documented here, not just the immediate task.
 
+## ⚠️ Active refactor in progress: 5-role model + score approval/e-signature/PDF
+
+A large, multi-session refactor is underway, driven by two design docs the user provided in chat (a role/logic summary and a UI/UX + color-palette doc — not files in this repo). **The full plan lives at `C:\Users\Tinnaphat\.claude\plans\joyful-cuddling-lamport.md` — read it in full before continuing this work.** It has the complete phase list, schema details, and the reasoning behind every decision below.
+
+Four foundational decisions were confirmed with the user and are already implemented — don't re-litigate them:
+1. `MENTOR` renamed to `TEAM_LEADER` (same role, extended with write/approval power) — not a new 4th role.
+2. E-signature = admin pre-uploads a static signature image per user; the system stamps it automatically at approval (never drawn live).
+3. Skip Queue = release the item + reorder to the end of that problem's queue — no new `QueueItem` status.
+4. STAFF-submitted scores/PDF signatures are attributed to the STAFF member's own identity, never the nominal COMMITTEE member they're covering for.
+
+**Backend phases done and committed** (frontend mostly not started yet — see gap below):
+- **B0** — role rename (`MENTOR`→`TEAM_LEADER`) + new `STAFF` role; `CommitteeAssignment` generalized to `UserAssignment` (adds nullable `SchoolId` scoping); migrations `002`/`003`; frontend route rename (`/mentor`→`/team-leader`, `/staff` placeholder, `session.ts`/`proxy.ts` updated)
+- **B1** — score submission → pending-approval workflow (`QueueItem.ApprovalStatus`, migration `004`)
+- **B2** — e-signature + PDF generation: `pdfkit` + OFL-licensed Thai font (`@expo-google-fonts/noto-sans-thai` — ships real `.ttf`, unlike `@fontsource`'s woff-only build), new `FileStorage` abstraction (`backend/src/common/file-storage.ts`) so PDF/signature I/O stays fake-able in tests, admin signature upload endpoint
+- **B3** — score-edit-request review moved from `ADMIN` to `TEAM_LEADER` (school-scoped via Score→QueueItem→SchoolId); approving a revision regenerates the PDF
+- **B4** — `STAFF` delegation: queue claim/submit/score-edit-request now accept `STAFF` within their `UserAssignment` scope (zero role-branching needed — same `(problemNumber, schoolId-null-or-match)` predicate serves both `COMMITTEE` and `STAFF`); `admin/staff` CRUD
+
+**Known temporary gap, left as-is on purpose**: `frontend/src/app/admin/score-edit-requests/page.tsx` still calls the endpoint B3 removed (moved to `team-leader/score-edit-requests`) — it will 403 until the matching frontend phase rebuilds it as a Team Leader page. Don't "fix" this piecemeal; it's scheduled.
+
+**Still to do** (full detail in the plan file):
+- **B5** — Skip Queue backend endpoint (release + reposition to end)
+- **B6** — permission-matrix read API for the admin UI
+- **F1** — shared sidebar shell (replaces the current flat top-nav) → **F2** approval UI (Team Leader approve page, `ScoreForm`/`StatusBadge` updates) → **F3** Staff pages (queue management: Call Next/Skip/Mark Complete) → **F4** admin permission-matrix UI (extends `admin/committee` page to cover COMMITTEE+STAFF+TEAM_LEADER, signature upload) → **F5** Scoreboard + Watermark (new component, new page) → **F6** Save Draft (client-only)
+- Frontend theme swap (KMUTNB Red `#C8102E` + Slate `#0F172A`, no dark mode) was already done and verified in an earlier session — don't redo it, just build new UI against the tokens already in `frontend/src/app/globals.css`.
+
+**To resume this work in a new chat, say:**
+> Continue the role-model refactor — read `C:\Users\Tinnaphat\.claude\plans\joyful-cuddling-lamport.md` and the "Active refactor in progress" section of CLAUDE.md, then keep going on Phase B5.
+
+(Swap "B5" for whichever phase is next once more land — update this line and the phase lists above as you go.)
+
 ## What this is
 
 A from-scratch rewrite of "TMO Grading Queue" (ระบบจัดการคิวตรวจข้อสอบ for a math olympiad), built strictly per [SPEC.md](SPEC.md) (the full requirement spec — schema, API contract, business rules, design system, all in Thai) and [PROMPT.md](PROMPT.md) (the instructions that drove the build). **SPEC.md is the source of truth for business behavior** — when in doubt about how something should behave, check it before guessing, and reference its section numbers (`§2.6` etc.) in code comments/commits when implementing a rule from it, matching the existing style.
@@ -22,7 +52,7 @@ Read [README.md](README.md) for the pre-build decisions that shaped the schema (
 
 ```bash
 npm run migrate                              # apply migrations/*.sql (tracked in dbo._migrations)
-npm run seed                                 # demo data: 16 schools, admin/committee1-5/mentor1 (password123), full queue
+npm run seed                                 # demo data: 16 schools, admin/committee1-5/team-leader1/staff1 (password123), full queue
 npm run migrate:data -- <path-to-pg_dump.sql>  # SPEC §9 production data migration
 npm run start:dev                            # http://localhost:4000
 npm run build
@@ -52,7 +82,7 @@ No test suite exists in `frontend/` currently.
 Layering is `controller → use-case → domain → repository`, enforced by directory structure under `src/modules/<feature>/`:
 
 - **Controllers** handle HTTP + DTO validation (`class-validator`/`class-transformer`), delegate everything else to a use-case.
-- **Use-cases** (`use-cases/*.use-case.ts`) hold business logic and are unit-tested against **in-memory fake repositories** from `src/testing/` — this is why the Jest suite needs no real database. High-risk use-cases (claim race condition, permission scoping, incomplete-score submission, mentor scope, scoring lock) have dedicated specs; see `backend/README.md`'s "Layout" table for the risk map.
+- **Use-cases** (`use-cases/*.use-case.ts`) hold business logic and are unit-tested against **in-memory fake repositories** from `src/testing/` — this is why the Jest suite needs no real database. High-risk use-cases (claim race condition, permission scoping, incomplete-score submission, team-leader/school scope, scoring lock) have dedicated specs; see `backend/README.md`'s "Layout" table for the risk map (pre-refactor — new modules like `approval/`, `user-assignment/`, `team-leader/` aren't reflected there yet).
 - **Repositories** (`*.repository.ts` interface + `*.repository.mssql.ts` implementation) are the only place raw SQL lives — always parameterized via `mssql`, never string-concatenated.
 - **Domain** (`src/domain/entities.ts`) holds plain entity types with no framework dependencies.
 
@@ -68,7 +98,7 @@ Cross-cutting rules:
 
 The Next.js app **never queries a database and holds no business rules** — it exists to own the httpOnly session cookie and proxy everything else to the NestJS backend.
 
-- `src/proxy.ts` (Next 16's renamed `middleware.ts`) role-gates `/admin`, `/committee`, `/mentor` by *decoding* (not verifying) the JWT cookie for UX redirects only — real authorization always happens in the NestJS Guard. Don't add authorization logic here beyond redirect-for-UX.
+- `src/proxy.ts` (Next 16's renamed `middleware.ts`) role-gates `/admin`, `/committee`, `/staff`, `/team-leader` by *decoding* (not verifying) the JWT cookie for UX redirects only — real authorization always happens in the NestJS Guard. Don't add authorization logic here beyond redirect-for-UX.
 - `src/app/api/bff/auth/login|logout/route.ts` are the only two routes with special handling (set/clear the httpOnly cookie); `src/app/api/bff/[...path]/route.ts` is a generic catch-all proxy that attaches `Authorization: Bearer <token>` from the cookie and streams the response through unchanged — this is what makes file upload/CSV/XLSX download work without special-casing.
 - `src/lib/use-queue-stream.ts` connects to the NestJS SSE endpoint **directly**, bypassing the BFF proxy, because SPEC §2.3 says that stream carries no sensitive payload.
 - `GET /api/bff/queue/mine`'s response nests each item's roster as `school.students` with `scores` at the item's top level — this mirrors SPEC §2.5's literal notation; don't "flatten" it without checking `backend/src/modules/queue/use-cases/get-my-queue.use-case.ts` first.

@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { requireRole } from "@/lib/session";
 
 const NAV = [
   { href: "/admin", label: "ภาพรวม" },
@@ -10,7 +11,8 @@ const NAV = [
   { href: "/admin/audit-log", label: "ประวัติ" },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  await requireRole("ADMIN");
   return (
     <AppSidebar title="ผู้ดูแลระบบ" nav={NAV}>
       <div className="mx-auto max-w-6xl px-4 py-6">{children}</div>

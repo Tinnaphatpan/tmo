@@ -1,6 +1,8 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { decodeJwt } from "jose";
+import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 export const SESSION_COOKIE_NAME = "tmo_session";
 
@@ -45,4 +47,35 @@ export function homePathForRole(role: Role): string {
   if (role === "COMMITTEE") return "/committee";
   if (role === "STAFF") return "/staff";
   return "/team-leader";
+}
+
+/**
+ * Role gate for the role layouts. The JWT cookie is only decoded (not
+ * verified) and its `role` claim goes stale when an admin changes the user's
+ * role, so ask the backend who the caller is *now* (`GET /auth/me`, which
+ * re-reads the DB). Wrong role -> that role's own home; expired/invalid ->
+ * /login. If the backend is unreachable, fall back to the decoded cookie
+ * (UX only — every API call is still authorized by the backend).
+ */
+export async function requireRole(required: Role): Promise<SessionUser> {
+  const token = await getSessionToken();
+  if (!token) redirect("/login");
+
+  let fresh: SessionUser | null = null;
+  try {
+    const res = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (res.status === 401) redirect("/login");
+    if (res.ok) fresh = (await res.json()) as SessionUser;
+  } catch (err) {
+    // next/navigation's redirect() throws a control-flow error — let it through.
+    if (isRedirectError(err)) throw err;
+  }
+
+  const session = fresh ?? (await getSession());
+  if (!session) redirect("/login");
+  if (session.role !== required) redirect(homePathForRole(session.role));
+  return session;
 }

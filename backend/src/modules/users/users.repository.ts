@@ -20,6 +20,13 @@ export abstract class UsersRepository {
   abstract create(input: CreateUserInput, executor?: Executor): Promise<User>;
   abstract updatePasswordHash(id: string, passwordHash: string, executor?: Executor): Promise<void>;
   abstract updateSignaturePath(id: string, signaturePath: string, executor?: Executor): Promise<void>;
+  /** Role change / re-homing a team leader. SchoolId is only meaningful for TEAM_LEADER (pass null otherwise). */
+  abstract updateRoleAndSchool(
+    id: string,
+    role: Role,
+    schoolId: string | null,
+    executor?: Executor,
+  ): Promise<void>;
   abstract delete(id: string, executor?: Executor): Promise<void>;
   abstract findAllCommittee(executor?: Executor): Promise<User[]>;
   abstract findAllByRole(role: Role, executor?: Executor): Promise<User[]>;

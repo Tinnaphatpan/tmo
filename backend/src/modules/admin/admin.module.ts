@@ -32,6 +32,9 @@ import { UploadSignatureUseCase } from './use-cases/upload-signature.use-case';
 import { ManageStaffAssignmentsUseCase } from './use-cases/manage-staff.use-case';
 import { ListStaffUseCase } from './use-cases/list-staff.use-case';
 import { GetPermissionMatrixUseCase } from './use-cases/get-permission-matrix.use-case';
+import { ManageTeamLeaderUseCase } from './use-cases/manage-team-leader.use-case';
+import { ChangeUserRoleUseCase } from './use-cases/change-user-role.use-case';
+import { AdminTeamLeadersController } from './admin-team-leaders.controller';
 
 @Module({
   imports: [
@@ -58,6 +61,7 @@ import { GetPermissionMatrixUseCase } from './use-cases/get-permission-matrix.us
     AdminUsersController,
     AdminStaffController,
     AdminPermissionsController,
+    AdminTeamLeadersController,
   ],
   providers: [
     ManageSchoolsUseCase,
@@ -70,6 +74,8 @@ import { GetPermissionMatrixUseCase } from './use-cases/get-permission-matrix.us
     ManageStaffAssignmentsUseCase,
     ListStaffUseCase,
     GetPermissionMatrixUseCase,
+    ManageTeamLeaderUseCase,
+    ChangeUserRoleUseCase,
   ],
 })
 export class AdminModule {}

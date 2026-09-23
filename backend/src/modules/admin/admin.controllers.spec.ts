@@ -13,6 +13,7 @@ import { GetPermissionMatrixUseCase } from './use-cases/get-permission-matrix.us
 import { ManageStaffAssignmentsUseCase } from './use-cases/manage-staff.use-case';
 import { ListStaffUseCase } from './use-cases/list-staff.use-case';
 import { UploadSignatureUseCase } from './use-cases/upload-signature.use-case';
+import { ChangeUserRoleUseCase } from './use-cases/change-user-role.use-case';
 
 const SCHOOL = '11111111-1111-4111-8111-111111111111';
 
@@ -34,6 +35,7 @@ describe('Admin controllers (HTTP)', () => {
         ManageStaffAssignmentsUseCase,
         ListStaffUseCase,
         UploadSignatureUseCase,
+        { provide: ChangeUserRoleUseCase, useValue: {} },
       ],
     });
   });

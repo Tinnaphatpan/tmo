@@ -33,7 +33,7 @@ export class AuthService {
     return { token, user: payload };
   }
 
-  private toPayload(user: User): JwtPayload {
+  toPayload(user: User): JwtPayload {
     return {
       id: user.id,
       username: user.username,

@@ -1,6 +1,6 @@
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Watermark } from "@/components/Watermark";
-import { getSession } from "@/lib/session";
+import { requireRole } from "@/lib/session";
 
 const NAV = [
   { href: "/team-leader", label: "คะแนนนักเรียน" },
@@ -9,13 +9,11 @@ const NAV = [
 ];
 
 export default async function TeamLeaderLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
+  const session = await requireRole("TEAM_LEADER");
   const stamp = new Date().toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
   return (
     <>
-      {session && (
-        <Watermark displayName={session.displayName} role={session.role} stamp={stamp} />
-      )}
+      <Watermark displayName={session.displayName} role={session.role} stamp={stamp} />
       <AppSidebar title="หัวหน้าทีม" nav={NAV}>
         {children}
       </AppSidebar>

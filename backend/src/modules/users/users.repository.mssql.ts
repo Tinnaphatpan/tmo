@@ -84,6 +84,19 @@ export class MssqlUsersRepository extends UsersRepository {
       .query('UPDATE [User] SET SignaturePath = @signaturePath WHERE Id = @id');
   }
 
+  async updateRoleAndSchool(
+    id: string,
+    role: User['role'],
+    schoolId: string | null,
+    executor?: Executor,
+  ): Promise<void> {
+    await request(this.exec(executor))
+      .input('id', sql.UniqueIdentifier, id)
+      .input('role', sql.VarChar, role)
+      .input('schoolId', sql.UniqueIdentifier, schoolId)
+      .query('UPDATE [User] SET Role = @role, SchoolId = @schoolId WHERE Id = @id');
+  }
+
   async delete(id: string, executor?: Executor): Promise<void> {
     await request(this.exec(executor))
       .input('id', sql.UniqueIdentifier, id)

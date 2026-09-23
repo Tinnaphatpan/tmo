@@ -47,6 +47,7 @@ Notes:
 
 - **Approving needs signatures.** Before a Team Leader can approve, an admin must upload a signature image for both the judge who submitted (`committee*`/`staff1`) and the team leader: `/admin/committee` → "อัปโหลดลายเซ็น" (PNG/JPEG).
 - **Roles are strict.** Opening another role's page redirects you to your own home; the backend re-checks the role on every request regardless.
+- **Changing roles.** Admins can create/delete Team Leaders and switch a user between Committee / Staff / Team Leader from `/admin/committee` (ADMIN accounts are DB-only on purpose). You can also set `[User].Role` directly in SQL — the API reads the role from the DB on every request — but then also fix the scope (`UserAssignment` rows for Committee/Staff, `User.SchoolId` for Team Leader).
 - **These accounts exist only after `npm run seed`.** With the real backup (`npm run migrate:data`) the users are whatever the old system had — use those credentials, and note that the old `MENTOR` accounts become `TEAM_LEADER`. Change the demo password before any non-local deployment.
 
 ## What's verified

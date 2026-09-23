@@ -227,15 +227,6 @@ describe("AdminPermissionsPage (F4)", () => {
     expect(await screen.findByText("ศูนย์: ศูนย์ A")).toBeInTheDocument();
   });
 
-  it("team leaders get signature upload only: no create form, edit or delete", async () => {
-    render(<AdminPermissionsPage />);
-    await userEvent.click(await screen.findByRole("button", { name: "หัวหน้าทีม" }));
-    await screen.findByText("หัวหน้า 1");
-    expect(screen.queryByRole("button", { name: "แก้ไข" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "ลบ" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "สร้างบัญชี" })).toBeNull();
-  });
-
   it("creates a committee user: button stays disabled until valid, then posts problemNumbers", async () => {
     post.mockResolvedValue({});
     render(<AdminPermissionsPage />);

@@ -123,6 +123,25 @@ describe('GET /health and POST /auth/login and AuthGuard (HTTP)', () => {
     });
   });
 
+  describe('GET /auth/me', () => {
+    it('401 without a token', async () => {
+      await http().get('/auth/me').expect(401);
+    });
+
+    it('returns the caller as the DB sees them now (fresh role after a role change), never the hash', async () => {
+      const auth = api.login({ id: 'me-1', role: 'COMMITTEE', displayName: 'Me' });
+      const before = await http().get('/auth/me').set('Authorization', auth).expect(200);
+      expect(before.body).toEqual({ id: 'me-1', username: 'api-user-1', displayName: 'Me', role: 'COMMITTEE', schoolId: null });
+
+      const user = (await api.usersRepo.findById('me-1'))!;
+      user.role = 'TEAM_LEADER';
+      user.schoolId = 'school-9';
+      const after = await http().get('/auth/me').set('Authorization', auth).expect(200);
+      expect(after.body).toMatchObject({ role: 'TEAM_LEADER', schoolId: 'school-9' });
+      expect(JSON.stringify(after.body)).not.toContain('passwordHash');
+    });
+  });
+
   describe('GET /schedule/export (public)', () => {
     it('200 CSV attachment without auth, header row + one row per slot', async () => {
       const res = await http().get('/schedule/export').expect(200);

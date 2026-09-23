@@ -28,7 +28,7 @@ export interface UpdateStaffInput {
  * level (SQL Server's plain UNIQUE treats multiple NULLs as distinct) — and
  * any exact (problemNumber, schoolId) repeat is just a bad request either
  * way, so catch all of it here rather than let a raw SQL error leak out. */
-function validateNoDuplicateAssignments(assignments: UserAssignmentScope[]): void {
+export function validateNoDuplicateAssignments(assignments: UserAssignmentScope[]): void {
   const seen = new Set<string>();
   for (const a of assignments) {
     const key = `${a.problemNumber}:${a.schoolId ?? 'null'}`;

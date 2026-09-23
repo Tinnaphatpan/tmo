@@ -197,3 +197,16 @@ body {
 .animate-soft-pulse {
   animation: soft-pulse 2s ease-in-out infinite;
 }
+
+/* Public queue board (/queue) — warm cream card + lavender grid, matching the
+   familiar wall-poster look. Scoped to `.queue-board` so the rest of the
+   app keeps the Red/Slate theme. */
+.queue-board {
+  --qb-page: #ece6dc;
+  --qb-card: #fdfaf4;
+  --qb-line: #cfd3ea;
+  --qb-head: #e8ebfc;
+  --qb-banner-fg: #3a3f9e;
+  --qb-active: #fdecd2;
+  --qb-done: #8a8f9c;
+}

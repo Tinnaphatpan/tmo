@@ -9,11 +9,13 @@ import { ReviewScoreEditRequestUseCase } from '../scores/use-cases/review-score-
 import { RealtimeService } from '../realtime/realtime.service';
 import { ReviewScoreEditRequestDto } from '../scores/dto/review-score-edit-request.dto';
 
-// SPEC §2.5 / §5.4 — /api/admin/score-edit-requests (ADMIN only).
-@Controller('admin/score-edit-requests')
+// TEAM_LEADER only, scoped to their own school — moved off ADMIN so a
+// school's own team leader reviews its own edit requests (SPEC §4.4 IDOR
+// guard enforced inside ReviewScoreEditRequestUseCase).
+@Controller('team-leader/score-edit-requests')
 @UseGuards(AuthGuard, RolesGuard)
-@Roles('ADMIN')
-export class AdminScoreEditRequestsController {
+@Roles('TEAM_LEADER')
+export class TeamLeaderScoreEditRequestsController {
   constructor(
     private readonly scoreEditRequestsRepository: ScoreEditRequestsRepository,
     private readonly reviewUseCase: ReviewScoreEditRequestUseCase,
@@ -21,8 +23,8 @@ export class AdminScoreEditRequestsController {
   ) {}
 
   @Get()
-  list() {
-    return this.scoreEditRequestsRepository.findAllWithContext();
+  list(@CurrentUser() user: User) {
+    return this.scoreEditRequestsRepository.findBySchoolWithContext(user.schoolId!);
   }
 
   @Patch(':id')
@@ -31,7 +33,12 @@ export class AdminScoreEditRequestsController {
     @Param('id') id: string,
     @Body() dto: ReviewScoreEditRequestDto,
   ) {
-    await this.reviewUseCase.execute({ requestId: id, action: dto.action, reviewerId: user.id });
+    await this.reviewUseCase.execute({
+      requestId: id,
+      action: dto.action,
+      reviewerId: user.id,
+      reviewerSchoolId: user.schoolId!,
+    });
     this.realtimeService.notifyChange();
     return { ok: true };
   }

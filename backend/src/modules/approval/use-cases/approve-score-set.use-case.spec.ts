@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { ApproveScoreSetUseCase } from './approve-score-set.use-case';
+import { ScoreSheetGenerator } from '../score-sheet-generator';
 import { FakeQueueRepository, makeQueueItem } from '../../../testing/fake-queue.repository';
 import { FakeUsersRepository, makeUser } from '../../../testing/fake-users.repository';
 import { FakeSchoolsRepository } from '../../../testing/fake-schools.repository';
@@ -26,15 +27,14 @@ function setUp(overrides?: {
   const scoresRepo = new FakeScoresRepository();
   const txRunner = new FakeTransactionRunner();
   const fileStorage = new FakeFileStorage();
-  const useCase = new ApproveScoreSetUseCase(
-    queueRepo,
+  const scoreSheetGenerator = new ScoreSheetGenerator(
     usersRepo,
     schoolsRepo,
     studentsRepo,
     scoresRepo,
-    txRunner,
     fileStorage,
   );
+  const useCase = new ApproveScoreSetUseCase(queueRepo, usersRepo, scoreSheetGenerator, txRunner);
 
   const judgeSignaturePath =
     overrides?.judgeSignaturePath !== undefined ? overrides.judgeSignaturePath : '/sig/judge-1.png';

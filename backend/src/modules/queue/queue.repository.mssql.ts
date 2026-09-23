@@ -180,6 +180,13 @@ export class MssqlQueueRepository extends QueueRepository {
       `);
   }
 
+  async updateDocumentPath(id: string, documentPath: string, executor?: Executor): Promise<void> {
+    await request(this.exec(executor))
+      .input('id', sql.UniqueIdentifier, id)
+      .input('documentPath', sql.NVarChar, documentPath)
+      .query('UPDATE QueueItem SET DocumentPath = @documentPath WHERE Id = @id');
+  }
+
   async findPendingApprovalBySchool(
     schoolId: string,
     executor?: Executor,

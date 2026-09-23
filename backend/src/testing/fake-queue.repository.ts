@@ -84,6 +84,11 @@ export class FakeQueueRepository extends QueueRepository {
     item.documentPath = documentPath;
   }
 
+  async updateDocumentPath(id: string, documentPath: string): Promise<void> {
+    const item = this.items.find((i) => i.id === id);
+    if (item) item.documentPath = documentPath;
+  }
+
   async findPendingApprovalBySchool(schoolId: string): Promise<QueueItemWithSchool[]> {
     return this.items
       .filter((i) => i.schoolId === schoolId && i.approvalStatus === 'PENDING')

@@ -45,6 +45,30 @@ interface ContextRow extends Row {
   RequestedByDisplayName: string;
 }
 
+function toContextEntity(row: ContextRow): ScoreEditRequestWithContext {
+  return {
+    ...toEntity(row),
+    schoolName: row.SchoolName,
+    studentName: row.StudentName,
+    studentCode: row.StudentCode,
+    problemNumber: row.ProblemNumber,
+    requestedByDisplayName: row.RequestedByDisplayName,
+  };
+}
+
+const CONTEXT_SELECT = `
+  SELECT r.Id, r.ScoreId, r.RequestedBy, r.OldValue, r.NewValue, r.Reason, r.Status,
+         r.ReviewedBy, r.ReviewedAt, r.CreatedAt,
+         sc.Name AS SchoolName, st.Name AS StudentName, st.StudentCode,
+         q.ProblemNumber, u.DisplayName AS RequestedByDisplayName
+  FROM ScoreEditRequest r
+  JOIN Score sco ON sco.Id = r.ScoreId
+  JOIN Student st ON st.Id = sco.StudentId
+  JOIN School sc ON sc.Id = st.SchoolId
+  JOIN QueueItem q ON q.Id = sco.QueueItemId
+  JOIN [User] u ON u.Id = r.RequestedBy
+`;
+
 @Injectable()
 export class MssqlScoreEditRequestsRepository extends ScoreEditRequestsRepository {
   constructor(@Inject(DB_POOL) private readonly pool: sql.ConnectionPool) {
@@ -83,26 +107,24 @@ export class MssqlScoreEditRequestsRepository extends ScoreEditRequestsRepositor
 
   async findAllWithContext(executor?: Executor): Promise<ScoreEditRequestWithContext[]> {
     const result = await request(this.exec(executor)).query<ContextRow>(`
-      SELECT r.Id, r.ScoreId, r.RequestedBy, r.OldValue, r.NewValue, r.Reason, r.Status,
-             r.ReviewedBy, r.ReviewedAt, r.CreatedAt,
-             sc.Name AS SchoolName, st.Name AS StudentName, st.StudentCode,
-             q.ProblemNumber, u.DisplayName AS RequestedByDisplayName
-      FROM ScoreEditRequest r
-      JOIN Score sco ON sco.Id = r.ScoreId
-      JOIN Student st ON st.Id = sco.StudentId
-      JOIN School sc ON sc.Id = st.SchoolId
-      JOIN QueueItem q ON q.Id = sco.QueueItemId
-      JOIN [User] u ON u.Id = r.RequestedBy
+      ${CONTEXT_SELECT}
       ORDER BY r.CreatedAt DESC
     `);
-    return result.recordset.map((row) => ({
-      ...toEntity(row),
-      schoolName: row.SchoolName,
-      studentName: row.StudentName,
-      studentCode: row.StudentCode,
-      problemNumber: row.ProblemNumber,
-      requestedByDisplayName: row.RequestedByDisplayName,
-    }));
+    return result.recordset.map(toContextEntity);
+  }
+
+  async findBySchoolWithContext(
+    schoolId: string,
+    executor?: Executor,
+  ): Promise<ScoreEditRequestWithContext[]> {
+    const result = await request(this.exec(executor))
+      .input('schoolId', sql.UniqueIdentifier, schoolId)
+      .query<ContextRow>(`
+        ${CONTEXT_SELECT}
+        WHERE sc.Id = @schoolId
+        ORDER BY r.CreatedAt DESC
+      `);
+    return result.recordset.map(toContextEntity);
   }
 
   async updateStatus(

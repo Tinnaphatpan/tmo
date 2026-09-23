@@ -40,6 +40,13 @@ export class FakeScoreEditRequestsRepository extends ScoreEditRequestsRepository
     }));
   }
 
+  // This fake doesn't model per-request school ownership (nothing currently
+  // unit-tests the filtering itself — the school-scope guard lives in
+  // ReviewScoreEditRequestUseCase via QueueRepository, not here).
+  async findBySchoolWithContext(): Promise<ScoreEditRequestWithContext[]> {
+    return this.findAllWithContext();
+  }
+
   async updateStatus(
     id: string,
     status: 'APPROVED' | 'REJECTED',

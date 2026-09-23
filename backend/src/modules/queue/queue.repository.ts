@@ -59,6 +59,14 @@ export abstract class QueueRepository {
     schoolId: string,
     executor?: Executor,
   ): Promise<QueueItemWithSchool[]>;
+  /** Overwrites only DocumentPath — used when a score revision regenerates
+   * the PDF after the item was already approved (ApprovedByUserId/ApprovedAt
+   * stay as the original approval's, per the confirmed no-version-history design). */
+  abstract updateDocumentPath(
+    id: string,
+    documentPath: string,
+    executor?: Executor,
+  ): Promise<void>;
 
   abstract create(
     input: { schoolId: string; problemNumber: number; position: number; scheduledAt: Date | null },

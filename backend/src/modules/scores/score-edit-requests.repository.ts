@@ -21,6 +21,10 @@ export abstract class ScoreEditRequestsRepository {
   abstract create(input: CreateScoreEditRequestInput, executor?: Executor): Promise<ScoreEditRequest>;
   abstract findById(id: string, executor?: Executor): Promise<ScoreEditRequest | null>;
   abstract findAllWithContext(executor?: Executor): Promise<ScoreEditRequestWithContext[]>;
+  abstract findBySchoolWithContext(
+    schoolId: string,
+    executor?: Executor,
+  ): Promise<ScoreEditRequestWithContext[]>;
   abstract updateStatus(
     id: string,
     status: 'APPROVED' | 'REJECTED',

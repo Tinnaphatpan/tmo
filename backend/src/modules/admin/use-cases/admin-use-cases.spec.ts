@@ -159,6 +159,11 @@ describe('ManageSchoolsUseCase', () => {
     );
   });
 
+  it('update of an unknown school is 404 (real DB returns no row)', async () => {
+    const useCase = new ManageSchoolsUseCase(new FakeSchoolsRepository());
+    await expect(useCase.update('ghost', { name: 'x', code: null })).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it('update changes fields', async () => {
     const repo = new FakeSchoolsRepository();
     const useCase = new ManageSchoolsUseCase(repo);

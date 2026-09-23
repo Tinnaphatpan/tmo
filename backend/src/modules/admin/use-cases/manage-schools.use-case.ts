@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { isUniqueViolation } from '../../../common/errors/sql-error.util';
 import { School } from '../../../domain/entities';
 import { SchoolsRepository, UpsertSchoolInput } from '../../schools/schools.repository';
@@ -18,6 +18,9 @@ export class ManageSchoolsUseCase {
   }
 
   async update(id: string, input: UpsertSchoolInput): Promise<School> {
+    if (!(await this.schoolsRepository.findById(id))) {
+      throw new NotFoundException('ไม่พบโรงเรียนนี้');
+    }
     try {
       return await this.schoolsRepository.update(id, input);
     } catch (err) {

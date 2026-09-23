@@ -12,6 +12,12 @@ import { QueueRepository } from '../queue.repository';
  * Order of checks matches the spec's documented error precedence:
  *   403 not assigned this problem → 409 already holding another item →
  *   409 lost the race to another judge.
+ *
+ * Scope check works unchanged for both COMMITTEE and STAFF: COMMITTEE's
+ * UserAssignment rows always have SchoolId=null (any school, that problem
+ * number — today's original semantics), while STAFF may have a non-null
+ * SchoolId restricting them to one school for that problem number. No
+ * role branching needed — just match on (problemNumber, schoolId-or-null).
  */
 @Injectable()
 export class ClaimQueueItemUseCase {
@@ -26,9 +32,11 @@ export class ClaimQueueItemUseCase {
       throw new NotFoundException('ไม่พบรายการคิวนี้');
     }
 
-    const assignedProblems =
-      await this.userAssignmentRepository.findProblemNumbersByUser(userId);
-    if (!assignedProblems.includes(item.problemNumber)) {
+    const scope = await this.userAssignmentRepository.findScopeByUser(userId);
+    const isAssigned = scope.some(
+      (s) => s.problemNumber === item.problemNumber && (s.schoolId === null || s.schoolId === item.schoolId),
+    );
+    if (!isAssigned) {
       throw new ForbiddenException('คุณไม่ได้รับมอบหมายให้ตรวจข้อนี้');
     }
 

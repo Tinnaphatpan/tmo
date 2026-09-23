@@ -60,14 +60,14 @@ export class QueueController {
 
   @Get('mine')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('COMMITTEE')
+  @Roles('COMMITTEE', 'STAFF')
   getMine(@CurrentUser() user: User): Promise<MyQueueResult> {
     return this.getMyQueue.execute(user.id);
   }
 
   @Post(':id/claim')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('COMMITTEE')
+  @Roles('COMMITTEE', 'STAFF')
   @HttpCode(HttpStatus.OK)
   async claim(
     @CurrentUser() user: User,
@@ -80,7 +80,7 @@ export class QueueController {
 
   @Post(':id/score')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('COMMITTEE')
+  @Roles('COMMITTEE', 'STAFF')
   @HttpCode(HttpStatus.OK)
   async score(
     @CurrentUser() user: User,
@@ -92,10 +92,10 @@ export class QueueController {
     return { ok: true };
   }
 
-  // Shared by committee (release own) and admin (force-release any) — SPEC §2.5.
+  // Shared by committee/staff (release own) and admin (force-release any) — SPEC §2.5.
   @Post(':id/release')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('COMMITTEE', 'ADMIN')
+  @Roles('COMMITTEE', 'STAFF', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async release(
     @CurrentUser() user: User,

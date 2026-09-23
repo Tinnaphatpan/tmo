@@ -46,7 +46,11 @@ export class FakeUsersRepository extends UsersRepository {
   }
 
   async findAllCommittee(): Promise<User[]> {
-    return this.users.filter((u) => u.role === 'COMMITTEE');
+    return this.findAllByRole('COMMITTEE');
+  }
+
+  async findAllByRole(role: User['role']): Promise<User[]> {
+    return this.users.filter((u) => u.role === role);
   }
 }
 

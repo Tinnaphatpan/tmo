@@ -25,6 +25,11 @@ export interface MyQueueResult {
  * school's every problem). Filtering happens at the query level via the
  * assigned problem numbers, not as a client-side/UI-only filter.
  *
+ * Also serves STAFF (delegated queue operation): a STAFF UserAssignment row
+ * may carry a non-null SchoolId, narrowing them to one school for that
+ * problem number — COMMITTEE's rows always have SchoolId=null (any school),
+ * so the same filter covers both without role branching.
+ *
  * Response shape follows SPEC's own notation literally — "items: [...พร้อม
  * school.students + scores]" — i.e. each item nests `school` (with its
  * `students` roster inside it) and a top-level `scores` array, so the
@@ -41,9 +46,14 @@ export class GetMyQueueUseCase {
   ) {}
 
   async execute(userId: string): Promise<MyQueueResult> {
-    const problemNumbers =
-      await this.userAssignmentRepository.findProblemNumbersByUser(userId);
-    const baseItems = await this.queueRepository.findByProblemNumbersWithSchool(problemNumbers);
+    const scope = await this.userAssignmentRepository.findScopeByUser(userId);
+    const problemNumbers = [...new Set(scope.map((s) => s.problemNumber))].sort((a, b) => a - b);
+    const candidateItems = await this.queueRepository.findByProblemNumbersWithSchool(problemNumbers);
+    const baseItems = candidateItems.filter((item) =>
+      scope.some(
+        (s) => s.problemNumber === item.problemNumber && (s.schoolId === null || s.schoolId === item.schoolId),
+      ),
+    );
     const settings = await this.settingsRepository.get();
 
     const rosterCache = new Map<string, Student[]>();

@@ -7,10 +7,13 @@ import { User } from '../../domain/entities';
 import { CreateScoreEditRequestUseCase } from './use-cases/create-score-edit-request.use-case';
 import { CreateScoreEditRequestDto } from './dto/create-score-edit-request.dto';
 
-// SPEC §2.5 POST /api/score-edit-requests (committee only).
+// SPEC §2.5 POST /api/score-edit-requests. STAFF included since B4: a STAFF
+// member who entered a score under their own identity may request its
+// correction the same as a COMMITTEE member (ownership still enforced in
+// CreateScoreEditRequestUseCase via Score.JudgeId, role-agnostic).
 @Controller('score-edit-requests')
 @UseGuards(AuthGuard, RolesGuard)
-@Roles('COMMITTEE')
+@Roles('COMMITTEE', 'STAFF')
 export class ScoreEditRequestsController {
   constructor(private readonly createUseCase: CreateScoreEditRequestUseCase) {}
 

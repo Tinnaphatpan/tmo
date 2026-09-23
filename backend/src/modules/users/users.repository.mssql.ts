@@ -91,9 +91,13 @@ export class MssqlUsersRepository extends UsersRepository {
   }
 
   async findAllCommittee(executor?: Executor): Promise<User[]> {
-    const result = await request(this.exec(executor)).query<UserRow>(
-      `SELECT ${SELECT_COLUMNS} FROM [User] WHERE Role = 'COMMITTEE' ORDER BY Username`,
-    );
+    return this.findAllByRole('COMMITTEE', executor);
+  }
+
+  async findAllByRole(role: User['role'], executor?: Executor): Promise<User[]> {
+    const result = await request(this.exec(executor))
+      .input('role', sql.VarChar, role)
+      .query<UserRow>(`SELECT ${SELECT_COLUMNS} FROM [User] WHERE Role = @role ORDER BY Username`);
     return result.recordset.map(toEntity);
   }
 }

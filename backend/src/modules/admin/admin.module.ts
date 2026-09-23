@@ -19,6 +19,7 @@ import { AdminSettingsController } from './admin-settings.controller';
 import { AdminAuditLogController } from './admin-audit-log.controller';
 import { AdminDashboardController } from './admin-dashboard.controller';
 import { AdminUsersController } from './admin-users.controller';
+import { AdminStaffController } from './admin-staff.controller';
 
 import { ManageSchoolsUseCase } from './use-cases/manage-schools.use-case';
 import { ManageCommitteeUseCase } from './use-cases/manage-committee.use-case';
@@ -27,6 +28,8 @@ import { ManageQueueUseCase } from './use-cases/manage-queue.use-case';
 import { GetDashboardUseCase } from './use-cases/get-dashboard.use-case';
 import { StudentImportUseCase } from './student-import/student-import.use-case';
 import { UploadSignatureUseCase } from './use-cases/upload-signature.use-case';
+import { ManageStaffAssignmentsUseCase } from './use-cases/manage-staff.use-case';
+import { ListStaffUseCase } from './use-cases/list-staff.use-case';
 
 @Module({
   imports: [
@@ -51,6 +54,7 @@ import { UploadSignatureUseCase } from './use-cases/upload-signature.use-case';
     AdminAuditLogController,
     AdminDashboardController,
     AdminUsersController,
+    AdminStaffController,
   ],
   providers: [
     ManageSchoolsUseCase,
@@ -60,6 +64,8 @@ import { UploadSignatureUseCase } from './use-cases/upload-signature.use-case';
     GetDashboardUseCase,
     StudentImportUseCase,
     UploadSignatureUseCase,
+    ManageStaffAssignmentsUseCase,
+    ListStaffUseCase,
   ],
 })
 export class AdminModule {}

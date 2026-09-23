@@ -66,6 +66,32 @@ describe('ClaimQueueItemUseCase', () => {
     await expect(useCase.execute('judge-1', 'q1')).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('lets a STAFF member claim an item within their (problemNumber, schoolId) delegation scope', async () => {
+    queueRepo.seed(makeQueueItem({ id: 'q1', problemNumber: 1, schoolId: 'school-1' }));
+    assignmentRepo.seedScope('staff-1', [{ problemNumber: 1, schoolId: 'school-1' }]);
+
+    await useCase.execute('staff-1', 'q1');
+
+    const item = await queueRepo.findById('q1');
+    expect(item?.claimedByUserId).toBe('staff-1');
+  });
+
+  it('rejects a STAFF member claiming outside their assigned school (SPEC-driven refactor, B4)', async () => {
+    queueRepo.seed(makeQueueItem({ id: 'q1', problemNumber: 1, schoolId: 'school-2' }));
+    assignmentRepo.seedScope('staff-1', [{ problemNumber: 1, schoolId: 'school-1' }]);
+
+    await expect(useCase.execute('staff-1', 'q1')).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('lets a STAFF member with a null-school (all schools) assignment claim any school for that problem', async () => {
+    queueRepo.seed(makeQueueItem({ id: 'q1', problemNumber: 4, schoolId: 'school-9' }));
+    assignmentRepo.seedScope('staff-1', [{ problemNumber: 4, schoolId: null }]);
+
+    await useCase.execute('staff-1', 'q1');
+
+    expect((await queueRepo.findById('q1'))?.claimedByUserId).toBe('staff-1');
+  });
+
   it('lets exactly one of two judges racing to claim the same WAITING item win (SPEC §0 item 4)', async () => {
     queueRepo.seed(makeQueueItem({ id: 'q1', problemNumber: 1 }));
     assignmentRepo.seed('judge-a', [1]);

@@ -37,6 +37,18 @@ describe('GetMyQueueUseCase', () => {
     expect(result.problemNumbers).toEqual([2]);
   });
 
+  it('scopes a STAFF member with a school-restricted assignment to just that school (SPEC-driven refactor, B4)', async () => {
+    const { queueRepo, assignmentRepo, useCase } = setUp();
+
+    queueRepo.seed(makeQueueItem({ id: 'q1', problemNumber: 1, schoolId: 'school-1' }));
+    queueRepo.seed(makeQueueItem({ id: 'q2', problemNumber: 1, schoolId: 'school-2' }));
+    assignmentRepo.seedScope('staff-1', [{ problemNumber: 1, schoolId: 'school-1' }]);
+
+    const result = await useCase.execute('staff-1');
+
+    expect(result.items.map((i) => i.id)).toEqual(['q1']);
+  });
+
   it('returns nothing for a judge with no assignments, not every item', async () => {
     const { queueRepo, useCase } = setUp();
 

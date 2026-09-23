@@ -22,4 +22,5 @@ export abstract class UsersRepository {
   abstract updateSignaturePath(id: string, signaturePath: string, executor?: Executor): Promise<void>;
   abstract delete(id: string, executor?: Executor): Promise<void>;
   abstract findAllCommittee(executor?: Executor): Promise<User[]>;
+  abstract findAllByRole(role: Role, executor?: Executor): Promise<User[]>;
 }

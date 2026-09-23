@@ -30,8 +30,7 @@ Four foundational decisions were confirmed with the user and are already impleme
 - **API tests** — `backend/src/testing/api-test-app.ts` is an HTTP harness (real AuthGuard/RolesGuard/ValidationPipe/exception filter + fake repos, via supertest); controller specs: `queue.controller.spec.ts`, `admin.controllers.spec.ts`, `approval.controller.spec.ts`, `scoreboard.controller.spec.ts`, `team-leader.controllers.spec.ts`. Frontend still has no test suite
 - **B4** — `STAFF` delegation: queue claim/submit/score-edit-request now accept `STAFF` within their `UserAssignment` scope (zero role-branching needed — same `(problemNumber, schoolId-null-or-match)` predicate serves both `COMMITTEE` and `STAFF`); `admin/staff` CRUD
 
-**Still to do** (full detail in the plan file):
-- **F6** Save Draft (client-only)
+**Still to do:** every planned phase is implemented. Remaining is live end-to-end verification against a real MSSQL backend (PDF Thai rendering, signature upload through the BFF, Skip Queue, approval flow), plus a frontend test suite.
 - Frontend theme swap (KMUTNB Red `#C8102E` + Slate `#0F172A`, no dark mode) was already done and verified in an earlier session — don't redo it, just build new UI against the tokens already in `frontend/src/app/globals.css`.
 
 **To resume this work in a new chat, say:**

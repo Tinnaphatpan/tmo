@@ -28,7 +28,7 @@ Four foundational decisions were confirmed with the user and are already impleme
 **Known temporary gap, left as-is on purpose**: `frontend/src/app/admin/score-edit-requests/page.tsx` still calls the endpoint B3 removed (moved to `team-leader/score-edit-requests`) — it will 403 until the matching frontend phase rebuilds it as a Team Leader page. Don't "fix" this piecemeal; it's scheduled.
 
 **Still to do** (full detail in the plan file):
-- **F2** approval UI (Team Leader approve page, `ScoreForm`/`StatusBadge` updates) → **F3** Staff pages (queue management: Call Next/Skip/Mark Complete) → **F4** admin permission-matrix UI (extends `admin/committee` page to cover COMMITTEE+STAFF+TEAM_LEADER, signature upload) → **F5** Scoreboard + Watermark (new component, new page) → **F6** Save Draft (client-only)
+- **F3** Staff pages (queue management: Call Next/Skip/Mark Complete) → **F4** admin permission-matrix UI (extends `admin/committee` page to cover COMMITTEE+STAFF+TEAM_LEADER, signature upload) → **F5** Scoreboard + Watermark (new component, new page) → **F6** Save Draft (client-only)
 - Frontend theme swap (KMUTNB Red `#C8102E` + Slate `#0F172A`, no dark mode) was already done and verified in an earlier session — don't redo it, just build new UI against the tokens already in `frontend/src/app/globals.css`.
 
 **To resume this work in a new chat, say:**

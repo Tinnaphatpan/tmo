@@ -3,7 +3,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 const NAV = [
   { href: "/admin", label: "ภาพรวม" },
   { href: "/admin/schools", label: "โรงเรียน" },
-  { href: "/admin/committee", label: "กรรมการ" },
+  { href: "/admin/committee", label: "ผู้ใช้และสิทธิ์" },
   { href: "/admin/students", label: "นักเรียน" },
   { href: "/admin/queue", label: "คิว" },
   { href: "/admin/scores", label: "คะแนน" },

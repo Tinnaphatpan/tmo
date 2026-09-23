@@ -7,7 +7,6 @@ const NAV = [
   { href: "/admin/students", label: "นักเรียน" },
   { href: "/admin/queue", label: "คิว" },
   { href: "/admin/scores", label: "คะแนน" },
-  { href: "/admin/score-edit-requests", label: "คำขอแก้ไข" },
   { href: "/admin/audit-log", label: "ประวัติ" },
 ];
 

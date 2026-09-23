@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 const NAV = [
   { href: "/team-leader", label: "คะแนนนักเรียน" },
   { href: "/team-leader/approvals", label: "อนุมัติคะแนน" },
+  { href: "/team-leader/score-edit-requests", label: "คำขอแก้ไขคะแนน" },
 ];
 
 export default async function TeamLeaderLayout({ children }: { children: React.ReactNode }) {

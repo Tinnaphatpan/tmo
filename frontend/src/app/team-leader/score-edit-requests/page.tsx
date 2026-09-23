@@ -24,13 +24,13 @@ const STATUS_LABEL: Record<string, string> = {
   REJECTED: "ปฏิเสธแล้ว",
 };
 
-export default function AdminScoreEditRequestsPage() {
+export default function TeamLeaderScoreEditRequestsPage() {
   const [items, setItems] = useState<ScoreEditRequestItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const { data } = await api.get<ScoreEditRequestItem[]>("/admin/score-edit-requests");
+      const { data } = await api.get<ScoreEditRequestItem[]>("/team-leader/score-edit-requests");
       setItems(data);
     } catch (err) {
       setError(getApiErrorMessage(err, "โหลดข้อมูลไม่สำเร็จ"));
@@ -44,7 +44,7 @@ export default function AdminScoreEditRequestsPage() {
   async function handleReview(id: string, action: "approve" | "reject") {
     setError(null);
     try {
-      await api.patch(`/admin/score-edit-requests/${id}`, { action });
+      await api.patch(`/team-leader/score-edit-requests/${id}`, { action });
       await load();
     } catch (err) {
       setError(getApiErrorMessage(err, "ดำเนินการไม่สำเร็จ"));
@@ -55,7 +55,7 @@ export default function AdminScoreEditRequestsPage() {
   const resolved = items.filter((i) => i.status !== "PENDING");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       <h2 className="text-lg font-bold text-ink-900">คำขอแก้ไขคะแนน</h2>
       {error && <p className="text-sm text-state-active-fg">{error}</p>}
 

@@ -32,6 +32,23 @@ cd ../frontend && cp .env.example .env.local
 npm install && npm run dev   # http://localhost:3000
 ```
 
+## Demo accounts (created by `npm run seed`)
+
+Every seeded account uses the password **`password123`**. Log in at `/login`; each role is redirected to its own home page.
+
+| Username | Role | Lands on | Scope / what it can do |
+|---|---|---|---|
+| `admin` | ADMIN | `/admin` | Everything administrative: schools, students, queue, users & permissions (incl. signature upload), scores, audit log, lock scoring |
+| `committee1` … `committee5` | COMMITTEE | `/committee` | Claims and scores queue items for **its own problem number** (committee*N* → problem *N*), all schools; read-only scoreboard |
+| `staff1` | STAFF | `/staff` | Delegated examiner for **problem 1**, all schools: Call Next / Skip / Return / Mark Complete, under its own identity |
+| `team-leader1` | TEAM_LEADER | `/team-leader` | Belongs to the **first seeded school**: views its scores, approves score sets (e-signature + PDF), reviews score-edit requests |
+
+Notes:
+
+- **Approving needs signatures.** Before a Team Leader can approve, an admin must upload a signature image for both the judge who submitted (`committee*`/`staff1`) and the team leader: `/admin/committee` → "อัปโหลดลายเซ็น" (PNG/JPEG).
+- **Roles are strict.** Opening another role's page redirects you to your own home; the backend re-checks the role on every request regardless.
+- **These accounts exist only after `npm run seed`.** With the real backup (`npm run migrate:data`) the users are whatever the old system had — use those credentials, and note that the old `MENTOR` accounts become `TEAM_LEADER`. Change the demo password before any non-local deployment.
+
 ## What's verified
 
 Initially built in a sandbox that only had SQL Server's named-pipe-only

@@ -30,7 +30,7 @@ Four foundational decisions were confirmed with the user and are already impleme
 - **API tests** — `backend/src/testing/api-test-app.ts` is an HTTP harness (real AuthGuard/RolesGuard/ValidationPipe/exception filter + fake repos, via supertest); controller specs: `queue.controller.spec.ts`, `admin.controllers.spec.ts`, `approval.controller.spec.ts`, `scoreboard.controller.spec.ts`, `team-leader.controllers.spec.ts`. Frontend still has no test suite
 - **B4** — `STAFF` delegation: queue claim/submit/score-edit-request now accept `STAFF` within their `UserAssignment` scope (zero role-branching needed — same `(problemNumber, schoolId-null-or-match)` predicate serves both `COMMITTEE` and `STAFF`); `admin/staff` CRUD
 
-**Still to do:** every planned phase is implemented. Remaining is live end-to-end verification against a real MSSQL backend (PDF Thai rendering, signature upload through the BFF, Skip Queue, approval flow), plus a frontend test suite.
+**Still to do:** every planned phase is implemented and was verified live (2026-09-23, scratch DB, since dropped): fresh migrations 001-004 + seed, claim/skip/score/approve/PDF/scoreboard/STAFF scope over HTTP, and the BFF UI flows (signature upload, Call Next, Save Draft, approve). Not done: visually confirming Thai glyphs in the PDF (font embedded, Thai mappings present), a frontend test suite, and use-case specs for the pre-refactor admin use-cases.
 - Frontend theme swap (KMUTNB Red `#C8102E` + Slate `#0F172A`, no dark mode) was already done and verified in an earlier session — don't redo it, just build new UI against the tokens already in `frontend/src/app/globals.css`.
 
 **To resume this work in a new chat, say:**

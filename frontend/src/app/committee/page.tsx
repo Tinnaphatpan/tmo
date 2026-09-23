@@ -8,7 +8,6 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { ScoreForm } from "@/components/ScoreForm";
 import { ScoreEditRequestModal } from "@/components/ScoreEditRequestModal";
-import { LogoutButton } from "@/components/LogoutButton";
 
 export default function CommitteePage() {
   const [data, setData] = useState<MyQueueResult | null>(null);
@@ -73,15 +72,14 @@ export default function CommitteePage() {
   const holdingAnother = data.currentItemId !== null;
 
   return (
-    <div className="min-h-screen bg-background px-4 py-6">
-      <header className="mx-auto mb-6 flex max-w-4xl items-center justify-between">
+    <div className="px-4 py-6">
+      <header className="mx-auto mb-6 max-w-4xl">
         <div>
           <h1 className="text-lg font-bold text-ink-900">แผงกรรมการ</h1>
           {data.scoringLocked && (
             <p className="text-sm text-state-active-fg">ปิดรับคะแนนแล้ว — ใช้ขอแก้ไขคะแนนแทน</p>
           )}
         </div>
-        <LogoutButton />
       </header>
 
       <div className="mx-auto max-w-4xl space-y-6">

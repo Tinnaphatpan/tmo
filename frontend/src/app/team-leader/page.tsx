@@ -4,19 +4,17 @@ import Link from "next/link";
 import { useTeamLeaderReport } from "@/lib/use-team-leader-report";
 import { MentorScoreTable } from "@/components/MentorScoreTable";
 import { Button } from "@/components/ui/Button";
-import { LogoutButton } from "@/components/LogoutButton";
 
 export default function TeamLeaderPage() {
   const { report, error } = useTeamLeaderReport();
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <header className="mx-auto mb-4 flex max-w-3xl items-center justify-between">
+    <div className="p-4">
+      <header className="mx-auto mb-4 max-w-3xl">
         <div>
           <h1 className="text-lg font-bold text-ink-900">คะแนนนักเรียน</h1>
           {report && <p className="text-sm text-ink-500">{report.schoolName}</p>}
         </div>
-        <LogoutButton />
       </header>
 
       <div className="mx-auto mb-4 flex max-w-3xl gap-2">

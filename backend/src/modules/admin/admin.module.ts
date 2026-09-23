@@ -19,6 +19,7 @@ import { AdminSettingsController } from './admin-settings.controller';
 import { AdminScoreEditRequestsController } from './admin-score-edit-requests.controller';
 import { AdminAuditLogController } from './admin-audit-log.controller';
 import { AdminDashboardController } from './admin-dashboard.controller';
+import { AdminUsersController } from './admin-users.controller';
 
 import { ManageSchoolsUseCase } from './use-cases/manage-schools.use-case';
 import { ManageCommitteeUseCase } from './use-cases/manage-committee.use-case';
@@ -27,6 +28,7 @@ import { ManageQueueUseCase } from './use-cases/manage-queue.use-case';
 import { GetDashboardUseCase } from './use-cases/get-dashboard.use-case';
 import { StudentImportUseCase } from './student-import/student-import.use-case';
 import { ReviewScoreEditRequestUseCase } from '../scores/use-cases/review-score-edit-request.use-case';
+import { UploadSignatureUseCase } from './use-cases/upload-signature.use-case';
 
 @Module({
   imports: [
@@ -51,6 +53,7 @@ import { ReviewScoreEditRequestUseCase } from '../scores/use-cases/review-score-
     AdminScoreEditRequestsController,
     AdminAuditLogController,
     AdminDashboardController,
+    AdminUsersController,
   ],
   providers: [
     ManageSchoolsUseCase,
@@ -60,6 +63,7 @@ import { ReviewScoreEditRequestUseCase } from '../scores/use-cases/review-score-
     GetDashboardUseCase,
     StudentImportUseCase,
     ReviewScoreEditRequestUseCase,
+    UploadSignatureUseCase,
   ],
 })
 export class AdminModule {}

@@ -2,7 +2,18 @@ import { BadRequestException, ConflictException, ForbiddenException } from '@nes
 import { ApproveScoreSetUseCase } from './approve-score-set.use-case';
 import { FakeQueueRepository, makeQueueItem } from '../../../testing/fake-queue.repository';
 import { FakeUsersRepository, makeUser } from '../../../testing/fake-users.repository';
+import { FakeSchoolsRepository } from '../../../testing/fake-schools.repository';
+import { FakeStudentsRepository, makeStudent } from '../../../testing/fake-students.repository';
+import { FakeScoresRepository } from '../../../testing/fake-scores.repository';
 import { FakeTransactionRunner } from '../../../testing/fake-transaction-runner';
+import { FakeFileStorage } from '../../../testing/fake-file-storage';
+
+// Smallest valid PNG (1x1 transparent pixel) — pdfkit inspects real magic
+// bytes/image data when embedding, so a fixture must be an actual image.
+const FIXTURE_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+);
 
 function setUp(overrides?: {
   judgeSignaturePath?: string | null;
@@ -10,29 +21,44 @@ function setUp(overrides?: {
 }) {
   const queueRepo = new FakeQueueRepository();
   const usersRepo = new FakeUsersRepository();
+  const schoolsRepo = new FakeSchoolsRepository();
+  const studentsRepo = new FakeStudentsRepository();
+  const scoresRepo = new FakeScoresRepository();
   const txRunner = new FakeTransactionRunner();
-  const useCase = new ApproveScoreSetUseCase(queueRepo, usersRepo, txRunner);
-
-  usersRepo.seed(
-    makeUser({
-      id: 'judge-1',
-      role: 'COMMITTEE',
-      signaturePath:
-        overrides?.judgeSignaturePath !== undefined ? overrides.judgeSignaturePath : '/sig/judge-1.png',
-    }),
+  const fileStorage = new FakeFileStorage();
+  const useCase = new ApproveScoreSetUseCase(
+    queueRepo,
+    usersRepo,
+    schoolsRepo,
+    studentsRepo,
+    scoresRepo,
+    txRunner,
+    fileStorage,
   );
+
+  const judgeSignaturePath =
+    overrides?.judgeSignaturePath !== undefined ? overrides.judgeSignaturePath : '/sig/judge-1.png';
+  const leaderSignaturePath =
+    overrides?.leaderSignaturePath !== undefined ? overrides.leaderSignaturePath : '/sig/leader-1.png';
+
+  if (judgeSignaturePath) fileStorage.signatures.set(judgeSignaturePath, FIXTURE_PNG);
+  if (leaderSignaturePath) fileStorage.signatures.set(leaderSignaturePath, FIXTURE_PNG);
+
+  usersRepo.seed(makeUser({ id: 'judge-1', role: 'COMMITTEE', signaturePath: judgeSignaturePath }));
   usersRepo.seed(
     makeUser({
       id: 'leader-1',
       role: 'TEAM_LEADER',
       schoolId: 'school-1',
-      signaturePath:
-        overrides?.leaderSignaturePath !== undefined ? overrides.leaderSignaturePath : '/sig/leader-1.png',
+      signaturePath: leaderSignaturePath,
     }),
   );
   usersRepo.seed(
     makeUser({ id: 'leader-2', role: 'TEAM_LEADER', schoolId: 'school-2', signaturePath: '/sig/leader-2.png' }),
   );
+
+  schoolsRepo.seed({ id: 'school-1', name: 'โรงเรียน A', code: 'A' });
+  studentsRepo.seed(makeStudent({ id: 's1', schoolId: 'school-1', seqNo: 1 }));
 
   queueRepo.seed(
     makeQueueItem({
@@ -44,12 +70,12 @@ function setUp(overrides?: {
     }),
   );
 
-  return { queueRepo, usersRepo, useCase };
+  return { queueRepo, usersRepo, fileStorage, useCase };
 }
 
 describe('ApproveScoreSetUseCase', () => {
-  it('approves a pending score set for the team leader’s own school', async () => {
-    const { useCase, queueRepo } = setUp();
+  it('approves a pending score set for the team leader’s own school and generates a PDF', async () => {
+    const { useCase, queueRepo, fileStorage } = setUp();
 
     await useCase.execute({ queueItemId: 'q1', teamLeaderId: 'leader-1' });
 
@@ -57,6 +83,10 @@ describe('ApproveScoreSetUseCase', () => {
     expect(item?.approvalStatus).toBe('APPROVED');
     expect(item?.approvedByUserId).toBe('leader-1');
     expect(item?.approvedAt).not.toBeNull();
+    expect(item?.documentPath).not.toBeNull();
+    expect(fileStorage.pdfs.size).toBe(1);
+    const pdfBuffer = [...fileStorage.pdfs.values()][0];
+    expect(pdfBuffer.subarray(0, 4).toString()).toBe('%PDF'); // real pdfkit output, Thai font embeds cleanly
   });
 
   it('rejects with 403 when the team leader belongs to a different school (SPEC §4.4 IDOR guard)', async () => {

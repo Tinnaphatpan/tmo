@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
+import { FileStorageModule } from './common/file-storage.module';
 import { AuthModule } from './auth/auth.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { ScoreEditRequestsModule } from './modules/scores/score-edit-requests.module';
@@ -16,6 +17,7 @@ import { AppService } from './app.service';
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
     DatabaseModule,
+    FileStorageModule,
     AuthModule,
     QueueModule,
     ScoreEditRequestsModule,

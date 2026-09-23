@@ -35,6 +35,11 @@ export class FakeUsersRepository extends UsersRepository {
     if (user) user.passwordHash = passwordHash;
   }
 
+  async updateSignaturePath(id: string, signaturePath: string): Promise<void> {
+    const user = this.users.find((u) => u.id === id);
+    if (user) user.signaturePath = signaturePath;
+  }
+
   async delete(id: string): Promise<void> {
     const index = this.users.findIndex((u) => u.id === id);
     if (index >= 0) this.users.splice(index, 1);

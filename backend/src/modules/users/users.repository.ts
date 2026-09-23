@@ -19,6 +19,7 @@ export abstract class UsersRepository {
   abstract findById(id: string, executor?: Executor): Promise<User | null>;
   abstract create(input: CreateUserInput, executor?: Executor): Promise<User>;
   abstract updatePasswordHash(id: string, passwordHash: string, executor?: Executor): Promise<void>;
+  abstract updateSignaturePath(id: string, signaturePath: string, executor?: Executor): Promise<void>;
   abstract delete(id: string, executor?: Executor): Promise<void>;
   abstract findAllCommittee(executor?: Executor): Promise<User[]>;
 }

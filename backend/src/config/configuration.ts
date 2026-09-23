@@ -16,6 +16,10 @@ export interface AppConfig {
     expiresIn: string;
   };
   bcryptSaltRounds: number;
+  storage: {
+    pdfDir: string;
+    signatureDir: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -36,4 +40,8 @@ export default (): AppConfig => ({
     expiresIn: process.env.JWT_EXPIRES_IN ?? '12h',
   },
   bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS ?? 10),
+  storage: {
+    pdfDir: process.env.PDF_STORAGE_DIR ?? './storage/pdfs',
+    signatureDir: process.env.SIGNATURE_STORAGE_DIR ?? './storage/signatures',
+  },
 });

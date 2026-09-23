@@ -19,18 +19,18 @@ Four foundational decisions were confirmed with the user and are already impleme
 - **B1** — score submission → pending-approval workflow (`QueueItem.ApprovalStatus`, migration `004`)
 - **B2** — e-signature + PDF generation: `pdfkit` + OFL-licensed Thai font (`@expo-google-fonts/noto-sans-thai` — ships real `.ttf`, unlike `@fontsource`'s woff-only build), new `FileStorage` abstraction (`backend/src/common/file-storage.ts`) so PDF/signature I/O stays fake-able in tests, admin signature upload endpoint
 - **B3** — score-edit-request review moved from `ADMIN` to `TEAM_LEADER` (school-scoped via Score→QueueItem→SchoolId); approving a revision regenerates the PDF
+- **B5** — Skip Queue: `POST /queue/:id/skip` (`COMMITTEE`/`STAFF`, caller must hold the item) releases it and sets `Position` to max sibling position for that problem + 1 (`SkipQueueItemUseCase`)
 - **B4** — `STAFF` delegation: queue claim/submit/score-edit-request now accept `STAFF` within their `UserAssignment` scope (zero role-branching needed — same `(problemNumber, schoolId-null-or-match)` predicate serves both `COMMITTEE` and `STAFF`); `admin/staff` CRUD
 
 **Known temporary gap, left as-is on purpose**: `frontend/src/app/admin/score-edit-requests/page.tsx` still calls the endpoint B3 removed (moved to `team-leader/score-edit-requests`) — it will 403 until the matching frontend phase rebuilds it as a Team Leader page. Don't "fix" this piecemeal; it's scheduled.
 
 **Still to do** (full detail in the plan file):
-- **B5** — Skip Queue backend endpoint (release + reposition to end)
 - **B6** — permission-matrix read API for the admin UI
 - **F1** — shared sidebar shell (replaces the current flat top-nav) → **F2** approval UI (Team Leader approve page, `ScoreForm`/`StatusBadge` updates) → **F3** Staff pages (queue management: Call Next/Skip/Mark Complete) → **F4** admin permission-matrix UI (extends `admin/committee` page to cover COMMITTEE+STAFF+TEAM_LEADER, signature upload) → **F5** Scoreboard + Watermark (new component, new page) → **F6** Save Draft (client-only)
 - Frontend theme swap (KMUTNB Red `#C8102E` + Slate `#0F172A`, no dark mode) was already done and verified in an earlier session — don't redo it, just build new UI against the tokens already in `frontend/src/app/globals.css`.
 
 **To resume this work in a new chat, say:**
-> Continue the role-model refactor — read `C:\Users\Tinnaphat\.claude\plans\joyful-cuddling-lamport.md` and the "Active refactor in progress" section of CLAUDE.md, then keep going on Phase B5.
+> Continue the role-model refactor — read `C:\Users\Tinnaphat\.claude\plans\joyful-cuddling-lamport.md` and the "Active refactor in progress" section of CLAUDE.md, then keep going on Phase B6.
 
 (Swap "B5" for whichever phase is next once more land — update this line and the phase lists above as you go.)
 

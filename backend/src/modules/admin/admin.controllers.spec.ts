@@ -175,16 +175,18 @@ describe('Admin controllers (HTTP)', () => {
         .expect(404);
     });
 
-    it('201/200: stores the image and records the path on the user', async () => {
+    it('201: stores the image, records the path on the user, and does not leak the path in the response', async () => {
       api.usersRepo.seed(makeUser({ id: 'u1', role: 'COMMITTEE' }));
       const res = await http()
         .post('/admin/users/u1/signature')
         .set('Authorization', admin())
         .attach('file', PNG, 'sig.png');
       expect([200, 201]).toContain(res.status);
-      expect(res.body.signaturePath).toContain('u1.png');
+      expect(res.body).toEqual({ ok: true });
       expect(fileStorage.signatures.size).toBe(1);
-      expect((await api.usersRepo.findById('u1'))?.signaturePath).toBe(res.body.signaturePath);
+      const stored = (await api.usersRepo.findById('u1'))?.signaturePath;
+      expect(stored).toContain('u1.png');
+      expect(JSON.stringify(res.body)).not.toContain(stored!);
     });
   });
 });

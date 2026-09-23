@@ -30,10 +30,12 @@ export class AdminUsersController {
     if (!file) {
       throw new BadRequestException('กรุณาแนบไฟล์');
     }
-    return this.uploadSignature.execute({
+    await this.uploadSignature.execute({
       userId: id,
       originalname: file.originalname,
       buffer: file.buffer,
     });
+    // Deliberately not echoing the stored path: it is a server filesystem location.
+    return { ok: true };
   }
 }

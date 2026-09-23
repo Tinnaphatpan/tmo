@@ -1,16 +1,16 @@
 import { ForbiddenException, ConflictException, NotFoundException } from '@nestjs/common';
 import { ClaimQueueItemUseCase } from './claim-queue-item.use-case';
 import { FakeQueueRepository, makeQueueItem } from '../../../testing/fake-queue.repository';
-import { FakeCommitteeAssignmentRepository } from '../../../testing/fake-committee-assignment.repository';
+import { FakeUserAssignmentRepository } from '../../../testing/fake-user-assignment.repository';
 
 describe('ClaimQueueItemUseCase', () => {
   let queueRepo: FakeQueueRepository;
-  let assignmentRepo: FakeCommitteeAssignmentRepository;
+  let assignmentRepo: FakeUserAssignmentRepository;
   let useCase: ClaimQueueItemUseCase;
 
   beforeEach(() => {
     queueRepo = new FakeQueueRepository();
-    assignmentRepo = new FakeCommitteeAssignmentRepository();
+    assignmentRepo = new FakeUserAssignmentRepository();
     useCase = new ClaimQueueItemUseCase(queueRepo, assignmentRepo);
   });
 

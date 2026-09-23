@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { AppConfig } from '../../../config/configuration';
 import { isForeignKeyViolation, isUniqueViolation } from '../../../common/errors/sql-error.util';
-import { CommitteeAssignmentRepository } from '../../committee/committee-assignment.repository';
+import { UserAssignmentRepository } from '../../user-assignment/user-assignment.repository';
 import { UsersRepository } from '../../users/users.repository';
 
 export interface CreateCommitteeInput {
@@ -18,12 +18,14 @@ export interface UpdateCommitteeInput {
   password?: string;
 }
 
-/** SPEC §2.5 — POST/PATCH/DELETE /api/admin/committee. */
+/** SPEC §2.5 — POST/PATCH/DELETE /api/admin/committee. COMMITTEE assignments
+ * are always all-schools for a problem number (schoolId=null) — the
+ * per-school scoping variant is for STAFF, see ManageStaffAssignmentsUseCase. */
 @Injectable()
 export class ManageCommitteeUseCase {
   constructor(
     private readonly usersRepository: UsersRepository,
-    private readonly committeeAssignmentRepository: CommitteeAssignmentRepository,
+    private readonly userAssignmentRepository: UserAssignmentRepository,
     private readonly configService: ConfigService<AppConfig, true>,
   ) {}
 
@@ -47,13 +49,19 @@ export class ManageCommitteeUseCase {
       if (isUniqueViolation(err)) throw new ConflictException('ชื่อผู้ใช้นี้มีอยู่แล้ว');
       throw err;
     }
-    await this.committeeAssignmentRepository.replaceForUser(user.id, input.problemNumbers);
+    await this.userAssignmentRepository.replaceForUser(
+      user.id,
+      input.problemNumbers.map((problemNumber) => ({ problemNumber, schoolId: null })),
+    );
     return { id: user.id, username: user.username };
   }
 
   async update(id: string, input: UpdateCommitteeInput): Promise<void> {
     if (input.problemNumbers) {
-      await this.committeeAssignmentRepository.replaceForUser(id, input.problemNumbers);
+      await this.userAssignmentRepository.replaceForUser(
+        id,
+        input.problemNumbers.map((problemNumber) => ({ problemNumber, schoolId: null })),
+      );
     }
     if (input.password) {
       const passwordHash = await this.hash(input.password);

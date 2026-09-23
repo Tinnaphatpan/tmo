@@ -6,13 +6,15 @@ const SESSION_COOKIE_NAME = "tmo_session";
 const PREFIX_ROLE: Record<string, string> = {
   "/admin": "ADMIN",
   "/committee": "COMMITTEE",
-  "/mentor": "MENTOR",
+  "/staff": "STAFF",
+  "/team-leader": "TEAM_LEADER",
 };
 
 function roleHome(role: string): string {
   if (role === "ADMIN") return "/admin";
   if (role === "COMMITTEE") return "/committee";
-  return "/mentor";
+  if (role === "STAFF") return "/staff";
+  return "/team-leader";
 }
 
 /**
@@ -54,5 +56,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/committee/:path*", "/mentor/:path*"],
+  matcher: ["/admin/:path*", "/committee/:path*", "/staff/:path*", "/team-leader/:path*"],
 };

@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/Button";
 const ROLE_HOME: Record<string, string> = {
   ADMIN: "/admin",
   COMMITTEE: "/committee",
-  MENTOR: "/mentor",
+  STAFF: "/staff",
+  TEAM_LEADER: "/team-leader",
 };
 
 function LoginForm() {

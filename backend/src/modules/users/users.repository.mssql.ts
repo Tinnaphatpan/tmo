@@ -12,7 +12,10 @@ interface UserRow {
   PasswordHash: string;
   Role: User['role'];
   SchoolId: string | null;
+  SignaturePath: string | null;
 }
+
+const SELECT_COLUMNS = 'Id, Username, DisplayName, PasswordHash, Role, SchoolId, SignaturePath';
 
 function toEntity(row: UserRow): User {
   return {
@@ -22,6 +25,7 @@ function toEntity(row: UserRow): User {
     passwordHash: row.PasswordHash,
     role: row.Role,
     schoolId: row.SchoolId,
+    signaturePath: row.SignaturePath,
   };
 }
 
@@ -38,9 +42,7 @@ export class MssqlUsersRepository extends UsersRepository {
   async findByUsername(username: string, executor?: Executor): Promise<User | null> {
     const result = await request(this.exec(executor))
       .input('username', sql.NVarChar, username)
-      .query<UserRow>(
-        'SELECT Id, Username, DisplayName, PasswordHash, Role, SchoolId FROM [User] WHERE Username = @username',
-      );
+      .query<UserRow>(`SELECT ${SELECT_COLUMNS} FROM [User] WHERE Username = @username`);
     const row = result.recordset[0];
     return row ? toEntity(row) : null;
   }
@@ -48,9 +50,7 @@ export class MssqlUsersRepository extends UsersRepository {
   async findById(id: string, executor?: Executor): Promise<User | null> {
     const result = await request(this.exec(executor))
       .input('id', sql.UniqueIdentifier, id)
-      .query<UserRow>(
-        'SELECT Id, Username, DisplayName, PasswordHash, Role, SchoolId FROM [User] WHERE Id = @id',
-      );
+      .query<UserRow>(`SELECT ${SELECT_COLUMNS} FROM [User] WHERE Id = @id`);
     const row = result.recordset[0];
     return row ? toEntity(row) : null;
   }
@@ -64,7 +64,7 @@ export class MssqlUsersRepository extends UsersRepository {
       .input('schoolId', sql.UniqueIdentifier, input.schoolId)
       .query<UserRow>(`
         INSERT INTO [User] (Username, DisplayName, PasswordHash, Role, SchoolId)
-        OUTPUT INSERTED.Id, INSERTED.Username, INSERTED.DisplayName, INSERTED.PasswordHash, INSERTED.Role, INSERTED.SchoolId
+        OUTPUT INSERTED.Id, INSERTED.Username, INSERTED.DisplayName, INSERTED.PasswordHash, INSERTED.Role, INSERTED.SchoolId, INSERTED.SignaturePath
         VALUES (@username, @displayName, @passwordHash, @role, @schoolId)
       `);
     return toEntity(result.recordset[0]);
@@ -85,7 +85,7 @@ export class MssqlUsersRepository extends UsersRepository {
 
   async findAllCommittee(executor?: Executor): Promise<User[]> {
     const result = await request(this.exec(executor)).query<UserRow>(
-      "SELECT Id, Username, DisplayName, PasswordHash, Role, SchoolId FROM [User] WHERE Role = 'COMMITTEE' ORDER BY Username",
+      `SELECT ${SELECT_COLUMNS} FROM [User] WHERE Role = 'COMMITTEE' ORDER BY Username`,
     );
     return result.recordset.map(toEntity);
   }

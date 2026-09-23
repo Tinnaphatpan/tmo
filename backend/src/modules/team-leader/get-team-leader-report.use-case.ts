@@ -3,7 +3,7 @@ import { SchoolsRepository } from '../schools/schools.repository';
 import { ScoresRepository } from '../scores/scores.repository';
 import { StudentsRepository } from '../students/students.repository';
 
-export interface MentorReportRow {
+export interface TeamLeaderReportRow {
   studentCode: string;
   name: string;
   /** index 0..4 = problem 1..5, null = not yet scored */
@@ -11,16 +11,16 @@ export interface MentorReportRow {
   total: number;
 }
 
-export interface MentorReport {
+export interface TeamLeaderReport {
   schoolName: string;
-  rows: MentorReportRow[];
+  rows: TeamLeaderReportRow[];
   grandTotal: number;
 }
 
 const PROBLEM_COUNT = 5;
 
 /**
- * SPEC §4.4 / §5.3 — GET /api/mentor/export and the /mentor page's table.
+ * SPEC §4.4 / §5.3 — GET /api/team-leader/export and the /team-leader page's table.
  *
  * `schoolId` here MUST be `session.user.schoolId`, never a client-supplied
  * value (SPEC §4.4 calls this out explicitly as an IDOR risk) — enforced by
@@ -28,14 +28,14 @@ const PROBLEM_COUNT = 5;
  * controller, never to a query/body parameter.
  */
 @Injectable()
-export class GetMentorReportUseCase {
+export class GetTeamLeaderReportUseCase {
   constructor(
     private readonly schoolsRepository: SchoolsRepository,
     private readonly studentsRepository: StudentsRepository,
     private readonly scoresRepository: ScoresRepository,
   ) {}
 
-  async execute(schoolId: string): Promise<MentorReport> {
+  async execute(schoolId: string): Promise<TeamLeaderReport> {
     const [school, roster, scoreRows] = await Promise.all([
       this.schoolsRepository.findById(schoolId),
       this.studentsRepository.findBySchool(schoolId),
@@ -51,7 +51,7 @@ export class GetMentorReportUseCase {
       if (cells) cells[row.problemNumber - 1] = row.value;
     }
 
-    const rows: MentorReportRow[] = roster
+    const rows: TeamLeaderReportRow[] = roster
       .sort((a, b) => a.seqNo - b.seqNo)
       .map((student) => {
         const scores = scoresByStudentCode.get(student.studentCode) ?? new Array(PROBLEM_COUNT).fill(null);

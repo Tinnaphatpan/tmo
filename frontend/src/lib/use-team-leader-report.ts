@@ -3,26 +3,26 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 
-export interface MentorReportRow {
+export interface TeamLeaderReportRow {
   studentCode: string;
   name: string;
   scores: (number | null)[];
   total: number;
 }
 
-export interface MentorReport {
+export interface TeamLeaderReport {
   schoolName: string;
-  rows: MentorReportRow[];
+  rows: TeamLeaderReportRow[];
   grandTotal: number;
 }
 
-export function useMentorReport() {
-  const [report, setReport] = useState<MentorReport | null>(null);
+export function useTeamLeaderReport() {
+  const [report, setReport] = useState<TeamLeaderReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api
-      .get<MentorReport>("/mentor/report")
+      .get<TeamLeaderReport>("/team-leader/report")
       .then(({ data }) => setReport(data))
       .catch(() => setError("โหลดข้อมูลไม่สำเร็จ"));
   }, []);

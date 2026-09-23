@@ -1,4 +1,4 @@
-import { GetMentorReportUseCase } from './get-mentor-report.use-case';
+import { GetTeamLeaderReportUseCase } from './get-team-leader-report.use-case';
 import { FakeSchoolsRepository } from '../../testing/fake-schools.repository';
 import { FakeStudentsRepository, makeStudent } from '../../testing/fake-students.repository';
 import { FakeScoresRepository } from '../../testing/fake-scores.repository';
@@ -7,7 +7,7 @@ function setUp() {
   const schoolsRepo = new FakeSchoolsRepository();
   const studentsRepo = new FakeStudentsRepository();
   const scoresRepo = new FakeScoresRepository();
-  const useCase = new GetMentorReportUseCase(schoolsRepo, studentsRepo, scoresRepo);
+  const useCase = new GetTeamLeaderReportUseCase(schoolsRepo, studentsRepo, scoresRepo);
 
   schoolsRepo.seed({ id: 'school-A', name: 'โรงเรียน A', code: 'A' });
   schoolsRepo.seed({ id: 'school-B', name: 'โรงเรียน B', code: 'B' });
@@ -45,7 +45,7 @@ function setUp() {
   return { useCase };
 }
 
-describe('GetMentorReportUseCase', () => {
+describe('GetTeamLeaderReportUseCase', () => {
   it('only returns rows and scores for the requested school (SPEC §4.4 IDOR guard)', async () => {
     const { useCase } = setUp();
 

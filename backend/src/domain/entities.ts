@@ -1,7 +1,7 @@
 // Domain entities (SPEC.md §2.1). Plain types — no ORM, no decorators here;
 // repositories map raw mssql recordset rows onto these.
 
-export type Role = 'ADMIN' | 'COMMITTEE' | 'MENTOR';
+export type Role = 'ADMIN' | 'COMMITTEE' | 'STAFF' | 'TEAM_LEADER';
 
 export type QueueStatus = 'WAITING' | 'IN_PROGRESS' | 'DONE';
 
@@ -20,12 +20,15 @@ export interface User {
   passwordHash: string;
   role: Role;
   schoolId: string | null;
+  signaturePath: string | null;
 }
 
-export interface CommitteeAssignment {
+/** SchoolId null = scoped to this problem number across all schools (COMMITTEE's original semantics). */
+export interface UserAssignment {
   id: string;
   userId: string;
   problemNumber: number;
+  schoolId: string | null;
 }
 
 export interface QueueItem {

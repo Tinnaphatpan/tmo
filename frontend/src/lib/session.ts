@@ -4,7 +4,7 @@ import { decodeJwt } from "jose";
 
 export const SESSION_COOKIE_NAME = "tmo_session";
 
-export type Role = "ADMIN" | "COMMITTEE" | "MENTOR";
+export type Role = "ADMIN" | "COMMITTEE" | "STAFF" | "TEAM_LEADER";
 
 export interface SessionUser {
   id: string;
@@ -43,5 +43,6 @@ export async function getSessionToken(): Promise<string | null> {
 export function homePathForRole(role: Role): string {
   if (role === "ADMIN") return "/admin";
   if (role === "COMMITTEE") return "/committee";
-  return "/mentor";
+  if (role === "STAFF") return "/staff";
+  return "/team-leader";
 }

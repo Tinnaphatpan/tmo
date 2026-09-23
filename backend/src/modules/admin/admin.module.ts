@@ -3,7 +3,7 @@ import { AuthModule } from '../../auth/auth.module';
 import { SchoolsModule } from '../schools/schools.module';
 import { StudentsModule } from '../students/students.module';
 import { UsersModule } from '../users/users.module';
-import { CommitteeAssignmentModule } from '../committee/committee-assignment.module';
+import { UserAssignmentModule } from '../user-assignment/user-assignment.module';
 import { QueueModule } from '../queue/queue.module';
 import { ScoresDataModule } from '../scores/scores-data.module';
 import { SettingsModule } from '../settings/settings.module';
@@ -34,7 +34,7 @@ import { ReviewScoreEditRequestUseCase } from '../scores/use-cases/review-score-
     SchoolsModule,
     StudentsModule,
     UsersModule,
-    CommitteeAssignmentModule,
+    UserAssignmentModule,
     QueueModule,
     ScoresDataModule,
     SettingsModule,

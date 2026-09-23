@@ -1,6 +1,6 @@
-import type { MentorReport } from "@/lib/use-mentor-report";
+import type { TeamLeaderReport } from "@/lib/use-team-leader-report";
 
-export function MentorScoreTable({ report }: { report: MentorReport }) {
+export function MentorScoreTable({ report }: { report: TeamLeaderReport }) {
   return (
     <table className="w-full min-w-[520px] border-collapse text-sm">
       <thead>

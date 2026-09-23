@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { QueueItem, Score, Student } from '../../../domain/entities';
-import { CommitteeAssignmentRepository } from '../../committee/committee-assignment.repository';
+import { UserAssignmentRepository } from '../../user-assignment/user-assignment.repository';
 import { SettingsRepository } from '../../settings/settings.repository';
 import { ScoresRepository } from '../../scores/scores.repository';
 import { StudentsRepository } from '../../students/students.repository';
@@ -34,7 +34,7 @@ export interface MyQueueResult {
 export class GetMyQueueUseCase {
   constructor(
     private readonly queueRepository: QueueRepository,
-    private readonly committeeAssignmentRepository: CommitteeAssignmentRepository,
+    private readonly userAssignmentRepository: UserAssignmentRepository,
     private readonly settingsRepository: SettingsRepository,
     private readonly studentsRepository: StudentsRepository,
     private readonly scoresRepository: ScoresRepository,
@@ -42,7 +42,7 @@ export class GetMyQueueUseCase {
 
   async execute(userId: string): Promise<MyQueueResult> {
     const problemNumbers =
-      await this.committeeAssignmentRepository.findProblemNumbersByUser(userId);
+      await this.userAssignmentRepository.findProblemNumbersByUser(userId);
     const baseItems = await this.queueRepository.findByProblemNumbersWithSchool(problemNumbers);
     const settings = await this.settingsRepository.get();
 

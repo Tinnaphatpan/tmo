@@ -1,12 +1,12 @@
 "use client";
 
-import { useMentorReport } from "@/lib/use-mentor-report";
+import { useTeamLeaderReport } from "@/lib/use-team-leader-report";
 import { MentorScoreTable } from "@/components/MentorScoreTable";
 import { PrintButton } from "@/components/PrintButton";
 
 // SPEC §5.3 — print-only view; `.no-print` hides everything but the table when printed.
-export default function MentorPrintPage() {
-  const { report, error } = useMentorReport();
+export default function TeamLeaderPrintPage() {
+  const { report, error } = useTeamLeaderReport();
 
   return (
     <div className="min-h-screen bg-background p-6">

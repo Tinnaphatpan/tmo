@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CommitteeAssignmentRepository } from '../../committee/committee-assignment.repository';
+import { UserAssignmentRepository } from '../../user-assignment/user-assignment.repository';
 import { UsersRepository } from '../../users/users.repository';
 
 export interface CommitteeListItem {
@@ -13,7 +13,7 @@ export interface CommitteeListItem {
 export class ListCommitteeUseCase {
   constructor(
     private readonly usersRepository: UsersRepository,
-    private readonly committeeAssignmentRepository: CommitteeAssignmentRepository,
+    private readonly userAssignmentRepository: UserAssignmentRepository,
   ) {}
 
   async execute(): Promise<CommitteeListItem[]> {
@@ -23,7 +23,7 @@ export class ListCommitteeUseCase {
         id: u.id,
         username: u.username,
         displayName: u.displayName,
-        problemNumbers: await this.committeeAssignmentRepository.findProblemNumbersByUser(u.id),
+        problemNumbers: await this.userAssignmentRepository.findProblemNumbersByUser(u.id),
       })),
     );
   }

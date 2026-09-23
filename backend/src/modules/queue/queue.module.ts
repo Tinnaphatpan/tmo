@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../../auth/auth.module';
-import { CommitteeAssignmentModule } from '../committee/committee-assignment.module';
+import { UserAssignmentModule } from '../user-assignment/user-assignment.module';
 import { StudentsModule } from '../students/students.module';
 import { ScoresDataModule } from '../scores/scores-data.module';
 import { SettingsModule } from '../settings/settings.module';
@@ -18,7 +18,7 @@ import { SubmitScoreUseCase } from './use-cases/submit-score.use-case';
 @Module({
   imports: [
     AuthModule,
-    CommitteeAssignmentModule,
+    UserAssignmentModule,
     StudentsModule,
     ScoresDataModule,
     SettingsModule,

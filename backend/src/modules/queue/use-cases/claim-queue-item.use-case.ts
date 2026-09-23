@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CommitteeAssignmentRepository } from '../../committee/committee-assignment.repository';
+import { UserAssignmentRepository } from '../../user-assignment/user-assignment.repository';
 import { QueueRepository } from '../queue.repository';
 
 /**
@@ -17,7 +17,7 @@ import { QueueRepository } from '../queue.repository';
 export class ClaimQueueItemUseCase {
   constructor(
     private readonly queueRepository: QueueRepository,
-    private readonly committeeAssignmentRepository: CommitteeAssignmentRepository,
+    private readonly userAssignmentRepository: UserAssignmentRepository,
   ) {}
 
   async execute(userId: string, queueItemId: string): Promise<void> {
@@ -27,7 +27,7 @@ export class ClaimQueueItemUseCase {
     }
 
     const assignedProblems =
-      await this.committeeAssignmentRepository.findProblemNumbersByUser(userId);
+      await this.userAssignmentRepository.findProblemNumbersByUser(userId);
     if (!assignedProblems.includes(item.problemNumber)) {
       throw new ForbiddenException('คุณไม่ได้รับมอบหมายให้ตรวจข้อนี้');
     }

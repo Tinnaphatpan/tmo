@@ -1,13 +1,13 @@
 import { GetMyQueueUseCase } from './get-my-queue.use-case';
 import { FakeQueueRepository, makeQueueItem } from '../../../testing/fake-queue.repository';
-import { FakeCommitteeAssignmentRepository } from '../../../testing/fake-committee-assignment.repository';
+import { FakeUserAssignmentRepository } from '../../../testing/fake-user-assignment.repository';
 import { FakeSettingsRepository } from '../../../testing/fake-settings.repository';
 import { FakeStudentsRepository, makeStudent } from '../../../testing/fake-students.repository';
 import { FakeScoresRepository } from '../../../testing/fake-scores.repository';
 
 function setUp() {
   const queueRepo = new FakeQueueRepository();
-  const assignmentRepo = new FakeCommitteeAssignmentRepository();
+  const assignmentRepo = new FakeUserAssignmentRepository();
   const settingsRepo = new FakeSettingsRepository();
   const studentsRepo = new FakeStudentsRepository();
   const scoresRepo = new FakeScoresRepository();
@@ -41,7 +41,7 @@ describe('GetMyQueueUseCase', () => {
     const { queueRepo, useCase } = setUp();
 
     queueRepo.seed(makeQueueItem({ id: 'q1', problemNumber: 1 }));
-    // judge-1 has no CommitteeAssignment rows at all
+    // judge-1 has no UserAssignment rows at all
 
     const result = await useCase.execute('judge-1');
 

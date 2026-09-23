@@ -120,13 +120,17 @@ async function migrateUsers(
   if (!block) return idMap;
   for (const row of block.rows) {
     const schoolId = row.schoolId ? (schoolIdMap.get(row.schoolId) ?? null) : null;
+    // The old dump's role enum predates the TEAM_LEADER/STAFF role split —
+    // its 'MENTOR' rows are exactly what TEAM_LEADER replaced (SPEC.md role
+    // rename), so remap here rather than let the new CK_User_Role reject them.
+    const role = row.role === 'MENTOR' ? 'TEAM_LEADER' : row.role;
     const result = await pool
       .request()
       .input('username', sql.NVarChar, row.username)
       .input('displayName', sql.NVarChar, row.displayName)
       // bcrypt hashes are portable across implementations — carried over verbatim.
       .input('passwordHash', sql.NVarChar, row.passwordHash)
-      .input('role', sql.VarChar, row.role)
+      .input('role', sql.VarChar, role)
       .input('schoolId', sql.UniqueIdentifier, schoolId)
       .query<{ Id: string }>(`
         INSERT INTO [User] (Username, DisplayName, PasswordHash, Role, SchoolId)

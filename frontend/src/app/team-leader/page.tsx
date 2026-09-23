@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMentorReport } from "@/lib/use-mentor-report";
+import { useTeamLeaderReport } from "@/lib/use-team-leader-report";
 import { MentorScoreTable } from "@/components/MentorScoreTable";
 import { Button } from "@/components/ui/Button";
 import { LogoutButton } from "@/components/LogoutButton";
 
-export default function MentorPage() {
-  const { report, error } = useMentorReport();
+export default function TeamLeaderPage() {
+  const { report, error } = useTeamLeaderReport();
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -22,10 +22,10 @@ export default function MentorPage() {
       <div className="mx-auto mb-4 flex max-w-3xl gap-2">
         {/* File download, not a page — next/link's client-side nav doesn't apply. */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/api/bff/mentor/export">
+        <a href="/api/bff/team-leader/export">
           <Button variant="secondary">📊 Excel</Button>
         </a>
-        <Link href="/mentor/print">
+        <Link href="/team-leader/print">
           <Button variant="secondary">🖨️ PDF</Button>
         </Link>
       </div>

@@ -12,7 +12,7 @@ import * as bcrypt from 'bcrypt';
 import * as sql from 'mssql';
 import { MssqlSchoolsRepository } from '../../modules/schools/schools.repository.mssql';
 import { MssqlUsersRepository } from '../../modules/users/users.repository.mssql';
-import { MssqlCommitteeAssignmentRepository } from '../../modules/committee/committee-assignment.repository.mssql';
+import { MssqlUserAssignmentRepository } from '../../modules/user-assignment/user-assignment.repository.mssql';
 import { MssqlStudentsRepository } from '../../modules/students/students.repository.mssql';
 import { MssqlQueueRepository } from '../../modules/queue/queue.repository.mssql';
 import { generateSchedule } from '../../modules/queue/rotation';
@@ -50,7 +50,7 @@ async function main(): Promise<void> {
 
     const schoolsRepo = new MssqlSchoolsRepository(pool);
     const usersRepo = new MssqlUsersRepository(pool);
-    const assignmentRepo = new MssqlCommitteeAssignmentRepository(pool);
+    const assignmentRepo = new MssqlUserAssignmentRepository(pool);
     const studentsRepo = new MssqlStudentsRepository(pool);
     const queueRepo = new MssqlQueueRepository(pool);
 
@@ -79,16 +79,25 @@ async function main(): Promise<void> {
         role: 'COMMITTEE',
         schoolId: null,
       });
-      await assignmentRepo.replaceForUser(user.id, [problemNumber]);
+      await assignmentRepo.replaceForUser(user.id, [{ problemNumber, schoolId: null }]);
     }
 
     await usersRepo.create({
-      username: 'mentor1',
-      displayName: `ครูที่ปรึกษา ${schools[0].name}`,
+      username: 'team-leader1',
+      displayName: `อาจารย์ผู้ควบคุมทีม ${schools[0].name}`,
       passwordHash,
-      role: 'MENTOR',
+      role: 'TEAM_LEADER',
       schoolId: schools[0].id,
     });
+
+    const staffUser = await usersRepo.create({
+      username: 'staff1',
+      displayName: 'เจ้าหน้าที่ข้อ 1',
+      passwordHash,
+      role: 'STAFF',
+      schoolId: null,
+    });
+    await assignmentRepo.replaceForUser(staffUser.id, [{ problemNumber: 1, schoolId: null }]);
 
     console.log(`Creating ${STUDENTS_PER_SCHOOL} students per school...`);
     for (const school of schools) {
@@ -116,7 +125,7 @@ async function main(): Promise<void> {
       });
     }
 
-    console.log(`Done. Seeded ${schools.length} schools, 7 users, ${schools.length * STUDENTS_PER_SCHOOL} students, ${cells.length} queue items.`);
+    console.log(`Done. Seeded ${schools.length} schools, 8 users, ${schools.length * STUDENTS_PER_SCHOOL} students, ${cells.length} queue items.`);
     console.log(`All test accounts use the password: ${TEST_PASSWORD}`);
   } finally {
     await pool.close();

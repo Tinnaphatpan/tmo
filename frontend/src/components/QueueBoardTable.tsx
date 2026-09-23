@@ -1,4 +1,4 @@
-import type { QueueSlot } from "@/lib/types";
+import type { PublicQueueItem, PublicQueueResult, QueueSlot, QueueSlotCell } from "@/lib/types";
 
 const TZ = "Asia/Bangkok";
 const SLOT_MINUTES = 15;
@@ -33,26 +33,71 @@ export function boardBanner(slots: QueueSlot[]): string | null {
   return `${formatBoardTime(first)} - ${formatBoardTime(end)} น.: ${BOARD_SESSION_LABEL} (${formatBoardDate(first)})`;
 }
 
+export interface BoardRow {
+  key: string;
+  /** First-column text: the slot time, or "คิวที่ n" for items without a time. */
+  label: string;
+  /** Time printed under each school code; null for unscheduled rows. */
+  time: string | null;
+  cells: QueueSlotCell[];
+}
+
+const toCell = (item: PublicQueueItem): QueueSlotCell => ({
+  id: item.id,
+  problemNumber: item.problemNumber,
+  school: item.school,
+  status: item.status,
+});
+
+/**
+ * Rows for the board: every scheduled slot (by time), then — so the page is
+ * never empty when a queue was created without times (e.g. data migrated from
+ * the old system) — the unscheduled items lined up by queue position, the
+ * n-th waiting item of each problem forming row "คิวที่ n".
+ */
+export function buildBoardRows(data: Pick<PublicQueueResult, "slots" | "items">): BoardRow[] {
+  const rows: BoardRow[] = data.slots.map((slot) => {
+    const time = formatBoardTime(slot.startsAt);
+    return { key: slot.startsAt, label: time, time, cells: slot.cells };
+  });
+
+  const byProblem = new Map<number, PublicQueueItem[]>();
+  for (const item of data.items.filter((i) => !i.scheduledAt)) {
+    byProblem.set(item.problemNumber, [...(byProblem.get(item.problemNumber) ?? []), item]);
+  }
+  const lists = [...byProblem.values()].map((l) => l.sort((a, b) => a.position - b.position));
+  const depth = Math.max(0, ...lists.map((l) => l.length));
+  for (let i = 0; i < depth; i++) {
+    rows.push({
+      key: `unscheduled-${i}`,
+      label: `คิวที่ ${i + 1}`,
+      time: null,
+      cells: lists.filter((l) => l[i]).map((l) => toCell(l[i])),
+    });
+  }
+  return rows;
+}
+
 /**
  * Whole-schedule overview: one row per start slot, one column per problem;
  * each cell shows the school code and its time. The cell being examined right
  * now (IN_PROGRESS) is highlighted; finished cells are muted.
  */
 export function QueueBoardTable({
-  slots,
+  rows,
   problemNumbers,
+  banner,
 }: {
-  slots: QueueSlot[];
+  rows: BoardRow[];
   problemNumbers: number[];
+  banner?: string | null;
 }) {
-  const banner = boardBanner(slots);
-
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[320px] table-fixed border-collapse text-[13px] leading-snug sm:text-[17px]">
         <thead>
           <tr>
-            <th className="w-[13%] border border-[var(--qb-line)] bg-[var(--qb-head)] px-1 py-3 text-center text-[14px] sm:w-[19%] sm:px-2 sm:text-[17px] font-semibold text-ink-900">
+            <th className="w-[13%] border border-[var(--qb-line)] bg-[var(--qb-head)] px-1 py-3 text-center text-[14px] font-semibold text-ink-900 sm:w-[19%] sm:px-2 sm:text-[17px]">
               slot
               <br />
               ตั้งต้น
@@ -70,7 +115,7 @@ export function QueueBoardTable({
             <tr>
               <th
                 colSpan={problemNumbers.length + 1}
-                className="border border-[var(--qb-line)] bg-[var(--qb-head)] px-3 py-2.5 text-left text-[14px] sm:text-[17px] font-semibold text-[var(--qb-banner-fg)]"
+                className="border border-[var(--qb-line)] bg-[var(--qb-head)] px-3 py-2.5 text-left text-[14px] font-semibold text-[var(--qb-banner-fg)] sm:text-[17px]"
               >
                 {banner}
               </th>
@@ -78,41 +123,38 @@ export function QueueBoardTable({
           )}
         </thead>
         <tbody>
-          {slots.map((slot) => {
-            const time = formatBoardTime(slot.startsAt);
-            return (
-              <tr key={slot.startsAt}>
-                <td className="border border-[var(--qb-line)] px-1 py-2 align-middle tabular-nums sm:px-2 text-ink-900">
-                  {time}
-                </td>
-                {problemNumbers.map((p) => {
-                  const cell = slot.cells.find((c) => c.problemNumber === p);
-                  const active = cell?.status === "IN_PROGRESS";
-                  const done = cell?.status === "DONE";
-                  return (
-                    <td
-                      key={p}
-                      data-status={cell?.status}
-                      className={`border border-[var(--qb-line)] px-[3px] py-2 align-middle sm:px-2 ${
-                        active ? "bg-[var(--qb-active)]" : ""
-                      }`}
-                    >
-                      {cell ? (
-                        <div className={done ? "text-[var(--qb-done)]" : "text-ink-900"}>
-                          <div className="text-[12px] font-bold tracking-tight sm:text-[17px] sm:tracking-normal">
-                            {cell.school.code ?? cell.school.name}
-                          </div>
-                          <div className="tabular-nums">{time}</div>
+          {rows.map((row) => (
+            <tr key={row.key}>
+              <td className="border border-[var(--qb-line)] px-1 py-2 align-middle tabular-nums text-ink-900 sm:px-2">
+                {row.label}
+              </td>
+              {problemNumbers.map((p) => {
+                const cell = row.cells.find((c) => c.problemNumber === p);
+                const active = cell?.status === "IN_PROGRESS";
+                const done = cell?.status === "DONE";
+                return (
+                  <td
+                    key={p}
+                    data-status={cell?.status}
+                    className={`border border-[var(--qb-line)] px-[3px] py-2 align-middle sm:px-2 ${
+                      active ? "bg-[var(--qb-active)]" : ""
+                    }`}
+                  >
+                    {cell ? (
+                      <div className={done ? "text-[var(--qb-done)]" : "text-ink-900"}>
+                        <div className="text-[12px] font-bold tracking-tight sm:text-[17px] sm:tracking-normal">
+                          {cell.school.code ?? cell.school.name}
                         </div>
-                      ) : (
-                        <span className="text-ink-300">-</span>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
+                        {row.time && <div className="tabular-nums">{row.time}</div>}
+                      </div>
+                    ) : (
+                      <span className="text-ink-300">-</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

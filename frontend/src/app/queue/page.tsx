@@ -1,10 +1,11 @@
 "use client";
 
 import { usePublicQueue } from "@/lib/use-public-queue";
-import { QueueBoardTable } from "@/components/QueueBoardTable";
+import { QueueBoardTable, boardBanner, buildBoardRows } from "@/components/QueueBoardTable";
 
 export default function PublicQueuePage() {
   const data = usePublicQueue();
+  const rows = data ? buildBoardRows(data) : [];
 
   return (
     <div className="queue-board min-h-screen bg-[var(--qb-page)]">
@@ -18,10 +19,14 @@ export default function PublicQueuePage() {
 
           {!data ? (
             <p className="py-8 text-center text-ink-500">กำลังโหลด...</p>
-          ) : data.slots.length === 0 ? (
+          ) : rows.length === 0 ? (
             <p className="py-8 text-center text-ink-500">ยังไม่มีตารางคิว</p>
           ) : (
-            <QueueBoardTable slots={data.slots} problemNumbers={data.problemNumbers} />
+            <QueueBoardTable
+              rows={rows}
+              problemNumbers={data.problemNumbers}
+              banner={boardBanner(data.slots)}
+            />
           )}
 
           {data && (

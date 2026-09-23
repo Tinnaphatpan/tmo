@@ -27,10 +27,10 @@ Four foundational decisions were confirmed with the user and are already impleme
 - **F4** — `admin/committee/page.tsx` rewritten as unified "ผู้ใช้และสิทธิ์" page (route unchanged): role tabs, reads `/admin/permissions` + `/admin/schools`; COMMITTEE = problem picker, STAFF = `ProblemSchoolMatrix` rows (problem + school or all); create/edit/delete via `/admin/committee|staff`; per-user signature upload to `/admin/users/:id/signature`. TEAM_LEADER tab is signature-only (no backend CRUD for creating/deleting team leaders exists)
 - **F5** — `components/Watermark.tsx` (fixed tiled SVG overlay of name · role · server timestamp, `--watermark-opacity` token, print-hidden) mounted in committee/staff/team-leader layouts (now async, read `getSession()`); backend `GET /scoreboard` (`COMMITTEE`/`STAFF`, `modules/scoreboard/`) + `committee/scoreboard/page.tsx` — first-pass per-school × per-problem sums, alphabetical, no ranking (design docs do not specify one), all schools visible, not filtered to the caller's assignments. No scoreboard nav entry for STAFF yet
 - **F6 + score-edit-requests move** — `ScoreForm` "บันทึกร่าง" (sessionStorage per item, cleared on submit); `admin/score-edit-requests` page moved to `team-leader/score-edit-requests` (closes the known gap above; admin nav entry removed)
-- **API tests** — `backend/src/testing/api-test-app.ts` is an HTTP harness (real AuthGuard/RolesGuard/ValidationPipe/exception filter + fake repos, via supertest); controller specs: `queue.controller.spec.ts`, `admin.controllers.spec.ts`, `approval.controller.spec.ts`, `scoreboard.controller.spec.ts`, `team-leader.controllers.spec.ts`. Frontend still has no test suite
+- **API tests** — `backend/src/testing/api-test-app.ts` is an HTTP harness (real AuthGuard/RolesGuard/ValidationPipe/exception filter + fake repos, via supertest); controller specs: `queue.controller.spec.ts`, `admin.controllers.spec.ts`, `approval.controller.spec.ts`, `scoreboard.controller.spec.ts`, `team-leader.controllers.spec.ts`. Frontend tests: see Commands
 - **B4** — `STAFF` delegation: queue claim/submit/score-edit-request now accept `STAFF` within their `UserAssignment` scope (zero role-branching needed — same `(problemNumber, schoolId-null-or-match)` predicate serves both `COMMITTEE` and `STAFF`); `admin/staff` CRUD
 
-**Still to do:** every planned phase is implemented and was verified live (2026-09-23, scratch DB, since dropped): fresh migrations 001-004 + seed, claim/skip/score/approve/PDF/scoreboard/STAFF scope over HTTP, and the BFF UI flows (signature upload, Call Next, Save Draft, approve). Not done: visually confirming Thai glyphs in the PDF (font embedded, Thai mappings present), a frontend test suite, and use-case specs for the pre-refactor admin use-cases.
+**Still to do:** every planned phase is implemented and was verified live (2026-09-23, scratch DB, since dropped): fresh migrations 001-004 + seed, claim/skip/score/approve/PDF/scoreboard/STAFF scope over HTTP, and the BFF UI flows (signature upload, Call Next, Save Draft, approve). Tests: backend 25 suites/134 tests (use-cases + HTTP controller specs), frontend 6 files/67 tests. Not done: visually confirming Thai glyphs in the PDF (font embedded, Thai mappings present).
 - Frontend theme swap (KMUTNB Red `#C8102E` + Slate `#0F172A`, no dark mode) was already done and verified in an earlier session — don't redo it, just build new UI against the tokens already in `frontend/src/app/globals.css`.
 
 **To resume this work in a new chat, say:**
@@ -75,9 +75,11 @@ Backend requires a **TCP-reachable** MSSQL server (`mssql`/tedious driver — na
 npm run dev     # http://localhost:3000 — requires backend running + .env.local BACKEND_URL set
 npm run build
 npm run lint    # eslint
+npm test        # vitest run (jsdom + Testing Library; api client and SSE hook are mocked, no backend needed)
+npx vitest run src/app/pages.test.tsx   # single file
 ```
 
-No test suite exists in `frontend/` currently.
+Frontend tests live next to the code as `*.test.ts(x)` (config: `vitest.config.mts`, `vitest.setup.ts`): proxy role gate, api client, shared components, `ScoreForm` (incl. Save Draft), and the staff/committee/scoreboard/approvals/score-edit-requests/admin-permissions pages.
 
 ## Architecture
 

@@ -170,6 +170,9 @@ export default function CommitteePage() {
                           ข้อ {item.problemNumber} · รวม {total.toFixed(2)} คะแนน
                         </p>
                       </div>
+                      <StatusBadge
+                        status={item.approvalStatus === "APPROVED" ? "APPROVED" : "PENDING_APPROVAL"}
+                      />
                     </div>
                     {data.scoringLocked && (
                       <div className="flex flex-wrap gap-2">

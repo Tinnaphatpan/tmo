@@ -2,12 +2,17 @@ const LABELS: Record<string, string> = {
   WAITING: "รอตรวจ",
   IN_PROGRESS: "กำลังตรวจ",
   DONE: "ตรวจแล้ว",
+  PENDING_APPROVAL: "รออนุมัติ",
+  APPROVED: "อนุมัติแล้ว",
 };
 
 const CLASSES: Record<string, string> = {
   WAITING: "bg-state-queued-bg text-state-queued-fg border-state-queued-border",
   IN_PROGRESS: "bg-state-active-bg text-state-active-fg border-state-active-border",
   DONE: "bg-state-done-bg text-state-done-fg border-state-done-border",
+  PENDING_APPROVAL:
+    "bg-state-pending-approval-bg text-state-pending-approval-fg border-state-pending-approval-border",
+  APPROVED: "bg-state-done-bg text-state-done-fg border-state-done-border",
 };
 
 export function StatusBadge({ status }: { status: string }) {

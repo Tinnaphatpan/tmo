@@ -22,6 +22,7 @@ Four foundational decisions were confirmed with the user and are already impleme
 - **B5** — Skip Queue: `POST /queue/:id/skip` (`COMMITTEE`/`STAFF`, caller must hold the item) releases it and sets `Position` to max sibling position for that problem + 1 (`SkipQueueItemUseCase`)
 - **B6** — `GET /admin/permissions` (`ADMIN`): every COMMITTEE/STAFF/TEAM_LEADER user with `role`, `schoolId`, `hasSignature`, `assignments[]` (`GetPermissionMatrixUseCase`)
 - **F1** — shared sidebar shell: `components/layout/AppSidebar.tsx` (fixed slate sidebar md+, drawer on mobile, print-hidden) used by new `committee|staff|team-leader/layout.tsx` and rewritten `admin/layout.tsx`; per-page headers/`LogoutButton` removed. Each role has a single nav item for now — F2/F3/F5 add entries to those `NAV` arrays
+- **F2** — approval UI: `team-leader/approvals/page.tsx` (pending list, approve-and-sign, PDF link after approval, score table for context), `StatusBadge` `PENDING_APPROVAL`/`APPROVED` + `--state-pending-approval-*` tokens, `ScoreForm` copy → "ส่งคะแนนเพื่อรออนุมัติ", committee done-list shows approval badge. Only pending items are listable (no backend endpoint for already-approved ones), so the page shows PDF links only for approvals made in the current session
 - **B4** — `STAFF` delegation: queue claim/submit/score-edit-request now accept `STAFF` within their `UserAssignment` scope (zero role-branching needed — same `(problemNumber, schoolId-null-or-match)` predicate serves both `COMMITTEE` and `STAFF`); `admin/staff` CRUD
 
 **Known temporary gap, left as-is on purpose**: `frontend/src/app/admin/score-edit-requests/page.tsx` still calls the endpoint B3 removed (moved to `team-leader/score-edit-requests`) — it will 403 until the matching frontend phase rebuilds it as a Team Leader page. Don't "fix" this piecemeal; it's scheduled.
@@ -31,9 +32,9 @@ Four foundational decisions were confirmed with the user and are already impleme
 - Frontend theme swap (KMUTNB Red `#C8102E` + Slate `#0F172A`, no dark mode) was already done and verified in an earlier session — don't redo it, just build new UI against the tokens already in `frontend/src/app/globals.css`.
 
 **To resume this work in a new chat, say:**
-> Continue the role-model refactor — read `C:\Users\Tinnaphat\.claude\plans\joyful-cuddling-lamport.md` and the "Active refactor in progress" section of CLAUDE.md, then keep going on Phase F2.
+> Continue the role-model refactor — read `C:\Users\Tinnaphat\.claude\plans\joyful-cuddling-lamport.md` and the "Active refactor in progress" section of CLAUDE.md, then keep going on Phase F3.
 
-(Swap "F2" for whichever phase is next once more land — update this line and the phase lists above as you go.)
+(Swap "F3" for whichever phase is next once more land — update this line and the phase lists above as you go.)
 
 ## What this is
 

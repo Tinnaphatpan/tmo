@@ -80,7 +80,7 @@ export function ScoreForm({ item, onSubmitted }: ScoreFormProps) {
       )}
 
       <Button onClick={handleSubmit} disabled={!allValid || submitting} className="w-full">
-        {submitting ? "กำลังบันทึก..." : "บันทึกและปิดคิวนี้"}
+        {submitting ? "กำลังบันทึก..." : "ส่งคะแนนเพื่อรออนุมัติ"}
       </Button>
     </div>
   );

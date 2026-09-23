@@ -69,6 +69,8 @@ export interface Score {
   judgeId: string;
 }
 
+export type ApprovalStatus = "NOT_SUBMITTED" | "PENDING" | "APPROVED";
+
 export interface MyQueueItem {
   id: string;
   problemNumber: number;
@@ -78,6 +80,7 @@ export interface MyQueueItem {
   claimedByUserId: string | null;
   school: SchoolRef & { students: Student[] };
   scores: Score[];
+  approvalStatus: ApprovalStatus;
 }
 
 export interface MyQueueResult {

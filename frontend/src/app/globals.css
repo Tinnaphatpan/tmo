@@ -41,6 +41,10 @@
   --state-done-fg: #065f46;
   --state-done-border: #a7f3d0;
 
+  --state-pending-approval-bg: #e0f2fe;
+  --state-pending-approval-fg: #075985;
+  --state-pending-approval-border: #bae6fd;
+
   /* Rotation schedule grid */
   --grid-line: #e2e8f0;
   --grid-head: #f1f5f9;
@@ -79,6 +83,9 @@
   --color-state-done-bg: var(--state-done-bg);
   --color-state-done-fg: var(--state-done-fg);
   --color-state-done-border: var(--state-done-border);
+  --color-state-pending-approval-bg: var(--state-pending-approval-bg);
+  --color-state-pending-approval-fg: var(--state-pending-approval-fg);
+  --color-state-pending-approval-border: var(--state-pending-approval-border);
 
   --color-grid-line: var(--grid-line);
   --color-grid-head: var(--grid-head);

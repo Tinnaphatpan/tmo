@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePublicQueue } from "@/lib/use-public-queue";
 import { QueueBoardTable, boardBanner, buildBoardRows } from "@/components/QueueBoardTable";
 
@@ -9,8 +10,14 @@ export default function PublicQueuePage() {
 
   return (
     <div className="queue-board min-h-screen bg-[var(--qb-page)]">
-      <header className="border-b border-black/10 bg-white py-4 text-center">
+      <header className="relative border-b border-black/10 bg-white py-4 text-center">
         <h1 className="text-[17px] font-bold text-ink-900">TMO Queue Board</h1>
+        <Link
+          href="/login"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--qb-banner-fg)] underline"
+        >
+          เข้าสู่ระบบ
+        </Link>
       </header>
 
       <main className="mx-auto max-w-4xl p-3 sm:p-4">

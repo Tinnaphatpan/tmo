@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
@@ -83,6 +84,12 @@ function LoginForm() {
             {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
           </Button>
         </form>
+
+        <div className="mt-6 border-t border-line pt-4 text-center">
+          <Link href="/queue" className="text-sm font-medium text-saed-600 hover:underline">
+            ดูคิวทั้งหมด (ไม่ต้องเข้าสู่ระบบ)
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -126,6 +126,14 @@ export class FakeQueueRepository extends QueueRepository {
     if (item) item.position = position;
   }
 
+  async updateSchedule(id: string, position: number, scheduledAt: Date): Promise<void> {
+    const item = this.items.find((i) => i.id === id);
+    if (item) {
+      item.position = position;
+      item.scheduledAt = scheduledAt;
+    }
+  }
+
   async delete(id: string): Promise<void> {
     const index = this.items.findIndex((i) => i.id === id);
     if (index >= 0) this.items.splice(index, 1);

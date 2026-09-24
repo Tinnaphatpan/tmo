@@ -25,6 +25,8 @@ export interface RotationOptions {
   firstSlotMinute?: number;
   rotationStep?: number;
   scheduleDate?: Date;
+  /** Exact start of slot 0; when given, firstSlotHour/Minute and scheduleDate are ignored (timezone-safe). */
+  firstSlotAt?: Date;
 }
 
 function gcd(a: number, b: number): number {
@@ -70,8 +72,13 @@ export function generateSchedule(
   const step = options.rotationStep ?? pickRotationStep(n);
   const slotMinutes = options.slotMinutes ?? 15;
 
-  const anchor = options.scheduleDate ? new Date(options.scheduleDate) : new Date();
-  anchor.setHours(options.firstSlotHour ?? 13, options.firstSlotMinute ?? 30, 0, 0);
+  let anchor: Date;
+  if (options.firstSlotAt) {
+    anchor = new Date(options.firstSlotAt);
+  } else {
+    anchor = options.scheduleDate ? new Date(options.scheduleDate) : new Date();
+    anchor.setHours(options.firstSlotHour ?? 13, options.firstSlotMinute ?? 30, 0, 0);
+  }
 
   const cells: ScheduleCell[] = [];
   for (let p = 0; p < problemCount; p++) {

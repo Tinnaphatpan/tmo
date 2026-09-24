@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsUUID, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsUUID, Matches, Max, Min } from 'class-validator';
 
 export class CreateQueueItemDto {
   @IsUUID()
@@ -16,4 +16,10 @@ export class MoveQueueItemDto {
 
   @IsIn(['up', 'down'], { message: 'direction ต้องเป็น up หรือ down' })
   direction!: 'up' | 'down';
+}
+
+export class GenerateScheduleDto {
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'วันที่ต้องอยู่ในรูปแบบ YYYY-MM-DD' })
+  date?: string;
 }

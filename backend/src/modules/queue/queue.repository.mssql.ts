@@ -223,6 +223,19 @@ export class MssqlQueueRepository extends QueueRepository {
       .query('UPDATE QueueItem SET Position = @position WHERE Id = @id');
   }
 
+  async updateSchedule(
+    id: string,
+    position: number,
+    scheduledAt: Date,
+    executor?: Executor,
+  ): Promise<void> {
+    await request(this.exec(executor))
+      .input('id', sql.UniqueIdentifier, id)
+      .input('position', sql.Int, position)
+      .input('scheduledAt', sql.DateTime2, scheduledAt)
+      .query('UPDATE QueueItem SET Position = @position, ScheduledAt = @scheduledAt WHERE Id = @id');
+  }
+
   async delete(id: string, executor?: Executor): Promise<void> {
     await request(this.exec(executor))
       .input('id', sql.UniqueIdentifier, id)

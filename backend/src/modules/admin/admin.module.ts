@@ -32,6 +32,7 @@ import { UploadSignatureUseCase } from './use-cases/upload-signature.use-case';
 import { ManageStaffAssignmentsUseCase } from './use-cases/manage-staff.use-case';
 import { ListStaffUseCase } from './use-cases/list-staff.use-case';
 import { GetPermissionMatrixUseCase } from './use-cases/get-permission-matrix.use-case';
+import { GenerateQueueScheduleUseCase } from './use-cases/generate-queue-schedule.use-case';
 import { ManageTeamLeaderUseCase } from './use-cases/manage-team-leader.use-case';
 import { ChangeUserRoleUseCase } from './use-cases/change-user-role.use-case';
 import { AdminTeamLeadersController } from './admin-team-leaders.controller';
@@ -76,6 +77,7 @@ import { AdminTeamLeadersController } from './admin-team-leaders.controller';
     GetPermissionMatrixUseCase,
     ManageTeamLeaderUseCase,
     ChangeUserRoleUseCase,
+    GenerateQueueScheduleUseCase,
   ],
 })
 export class AdminModule {}

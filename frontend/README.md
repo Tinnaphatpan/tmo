@@ -10,34 +10,7 @@ one thing, the httpOnly session cookie.
 npm install
 cp .env.example .env.local   # point BACKEND_URL / NEXT_PUBLIC_API_URL at a running backend
 npm run dev
-```
-
-## Layout
-
-```
-src/
-  proxy.ts                 Next.js 16's renamed `middleware.ts` — role-gates
-                             /admin, /committee, /mentor by decoding (not
-                             verifying) the JWT cookie; real authorization is
-                             always the NestJS Guard (SPEC §2.2 last bullet)
-  app/
-    api/bff/
-      auth/login/route.ts    forwards to NestJS POST /auth/login, sets the httpOnly cookie
-      auth/logout/route.ts   clears the cookie
-      [...path]/route.ts     generic proxy for everything else — attaches
-                               Authorization: Bearer <token> from the cookie
-                               and streams the response straight through
-                               (works for JSON, multipart file upload, and
-                               CSV/XLSX file downloads alike)
-    login/, display/, queue/, committee/, mentor/, mentor/print/, admin/*
-  lib/
-    session.ts               server-only cookie/JWT helpers
-    api-client.ts             browser axios instance, baseURL /api/bff
-    use-queue-stream.ts        SSE hook — connects to NestJS *directly*
-                                 (SPEC §2.3: no sensitive payload, not proxied)
-    use-public-queue.ts         shared fetch+SSE-refresh hook for /display and /queue
-  components/                ScoreForm, ScheduleGrid, ScoreEditRequestModal, ui/*
-```
+``````
 
 ## A note on this environment
 

@@ -66,3 +66,16 @@ describe('generateSchedule', () => {
     expect(seen.size).toBe(13 * 5);
   });
 });
+
+describe('generateSchedule firstSlotAt (timezone-safe anchor)', () => {
+  it('starts slot 0 exactly at firstSlotAt and steps by slotMinutes, ignoring the server timezone', () => {
+    const firstSlotAt = new Date('2026-05-17T13:30:00+07:00');
+    const schools = Array.from({ length: 16 }, (_, i) => ({ id: `s${i}`, code: `C${i}` }));
+    const cells = generateSchedule(schools, { firstSlotAt, slotMinutes: 15 });
+    expect(cells).toHaveLength(80);
+    const slot0 = cells.find((c) => c.slot === 0)!;
+    const slot15 = cells.find((c) => c.slot === 15)!;
+    expect(slot0.scheduledAt.toISOString()).toBe('2026-05-17T06:30:00.000Z');
+    expect(slot15.scheduledAt.toISOString()).toBe('2026-05-17T10:15:00.000Z'); // 17:15 Bangkok
+  });
+});

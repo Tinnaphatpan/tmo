@@ -34,6 +34,9 @@ import { ManageSchoolsUseCase } from './use-cases/manage-schools.use-case';
 import { ManageQueueUseCase } from './use-cases/manage-queue.use-case';
 import { GetDashboardUseCase } from './use-cases/get-dashboard.use-case';
 import { StudentImportUseCase } from './student-import/student-import.use-case';
+import { GenerateQueueScheduleUseCase } from './use-cases/generate-queue-schedule.use-case';
+import { FakeTransactionRunner } from '../../testing/fake-transaction-runner';
+import { TransactionRunner } from '../../database/transaction-runner';
 
 const U = (n: number) => `${String(n).repeat(8)}-${String(n).repeat(4)}-4${String(n).repeat(3)}-8${String(n).repeat(3)}-${String(n).repeat(12)}`;
 
@@ -85,6 +88,8 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
         ManageQueueUseCase,
         GetDashboardUseCase,
         StudentImportUseCase,
+        GenerateQueueScheduleUseCase,
+        { provide: TransactionRunner, useValue: new FakeTransactionRunner() },
       ],
     });
   });
@@ -108,6 +113,7 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
     ['post', '/admin/queue'],
     ['patch', '/admin/queue'],
     ['delete', '/admin/queue'],
+    ['post', '/admin/queue/generate'],
     ['get', '/admin/students'],
     ['post', '/admin/students/import'],
     ['delete', '/admin/students'],

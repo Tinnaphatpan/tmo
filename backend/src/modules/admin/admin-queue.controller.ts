@@ -1,10 +1,14 @@
 import { Body, Controller, Delete, Get, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../../domain/entities';
+import { RealtimeService } from '../realtime/realtime.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { QueueRepository } from '../queue/queue.repository';
 import { ManageQueueUseCase } from './use-cases/manage-queue.use-case';
-import { CreateQueueItemDto, MoveQueueItemDto } from './dto/manage-queue.dto';
+import { GenerateQueueScheduleUseCase } from './use-cases/generate-queue-schedule.use-case';
+import { CreateQueueItemDto, GenerateScheduleDto, MoveQueueItemDto } from './dto/manage-queue.dto';
 
 // SPEC §2.5 — /api/admin/queue (ADMIN only).
 @Controller('admin/queue')
@@ -14,11 +18,21 @@ export class AdminQueueController {
   constructor(
     private readonly manageQueue: ManageQueueUseCase,
     private readonly queueRepository: QueueRepository,
+    private readonly generateSchedule: GenerateQueueScheduleUseCase,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   @Get()
   list() {
     return this.queueRepository.findAllWithSchool();
+  }
+
+  /** Builds the full rotation queue (16 centres x 5 problems with 15-minute slots from 13:30). */
+  @Post('generate')
+  async generate(@CurrentUser() user: User, @Body() dto: GenerateScheduleDto) {
+    const result = await this.generateSchedule.execute({ date: dto.date, actorId: user.id });
+    this.realtimeService.notifyChange();
+    return result;
   }
 
   @Post()

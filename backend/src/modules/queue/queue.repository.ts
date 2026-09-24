@@ -73,6 +73,13 @@ export abstract class QueueRepository {
     executor?: Executor,
   ): Promise<QueueItem>;
   abstract updatePosition(id: string, position: number, executor?: Executor): Promise<void>;
+  /** Re-times an item (used by schedule generation): both Position and ScheduledAt. */
+  abstract updateSchedule(
+    id: string,
+    position: number,
+    scheduledAt: Date,
+    executor?: Executor,
+  ): Promise<void>;
   abstract delete(id: string, executor?: Executor): Promise<void>;
 
   abstract findStaleInProgress(

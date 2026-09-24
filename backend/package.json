@@ -20,7 +20,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "migrate": "ts-node -r tsconfig-paths/register src/database/migrate.ts",
     "seed": "ts-node -r tsconfig-paths/register src/database/seed/seed.ts",
-    "migrate:data": "ts-node -r tsconfig-paths/register src/database/migrate-data.ts"
+    "migrate:data": "ts-node -r tsconfig-paths/register src/database/migrate-data.ts",
+    "prepare:test": "ts-node -r tsconfig-paths/register src/database/prepare-test-data.ts",
+    "reset:test": "ts-node -r tsconfig-paths/register src/database/reset-test-run.ts"
   },
   "dependencies": {
     "@expo-google-fonts/noto-sans-thai": "^0.4.2",

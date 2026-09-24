@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSkeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
 import { useTeamLeaderReport } from "@/lib/use-team-leader-report";
 import { MentorScoreTable } from "@/components/MentorScoreTable";
@@ -30,7 +31,7 @@ export default function TeamLeaderPage() {
 
       <div className="mx-auto max-w-3xl overflow-x-auto rounded-xl border border-line bg-surface p-2">
         {error && <p className="p-4 text-state-active-fg">{error}</p>}
-        {!report && !error && <p className="p-4 text-ink-500">กำลังโหลด...</p>}
+        {!report && !error && <PageSkeleton rows={6} />}
         {report && <MentorScoreTable report={report} />}
       </div>
     </div>

@@ -41,7 +41,7 @@ Every seeded account uses the password **`password123`**. Log in at `/login`; ea
 | `admin` | ADMIN | `/admin` | Everything administrative: schools, students, queue, users & permissions (incl. signature upload), scores, audit log, lock scoring |
 | `committee1` … `committee5` | COMMITTEE | `/committee` | Claims and scores queue items for **its own problem number** (committee*N* → problem *N*), all schools; read-only scoreboard |
 | `staff1` | STAFF | `/staff` | Delegated examiner for **problem 1**, all schools: Call Next / Skip / Return / Mark Complete, under its own identity |
-| `team-leader1` | TEAM_LEADER | `/team-leader` | Belongs to the **first seeded school**: views its scores, approves score sets (e-signature + PDF), reviews score-edit requests |
+| `team-leader1` (seed) / `mentor1` (imported real data) | TEAM_LEADER | `/team-leader` | Belongs to **one school** (CMU in the real data): views its scores, approves score sets (e-signature + PDF), reviews score-edit requests. It can only approve *its own school's* items |
 
 Notes:
 
@@ -49,6 +49,30 @@ Notes:
 - **Roles are strict.** Opening another role's page redirects you to your own home; the backend re-checks the role on every request regardless.
 - **Changing roles.** Admins can create/delete Team Leaders and switch a user between Committee / Staff / Team Leader from `/admin/committee` (ADMIN accounts are DB-only on purpose). You can also set `[User].Role` directly in SQL — the API reads the role from the DB on every request — but then also fix the scope (`UserAssignment` rows for Committee/Staff, `User.SchoolId` for Team Leader).
 - **These accounts exist only after `npm run seed`.** With the real backup (`npm run migrate:data`) the users are whatever the old system had — use those credentials, and note that the old `MENTOR` accounts become `TEAM_LEADER`. Change the demo password before any non-local deployment.
+
+## Database connection
+
+The backend reads these from `backend/.env` (copy `backend/.env.example`; `.env` is git-ignored):
+
+| Setting | Value on this machine |
+|---|---|
+| Server / port | `localhost`, `1433` (SQL Server 2019 Developer, instance `MSSQLSERVER`, TCP enabled) |
+| Database | `TmoGradingQueue` |
+| Login | SQL auth, user `tmo_app` (password: `DB_PASSWORD` in `backend/.env`) |
+| Encryption | `DB_ENCRYPT=true`, `DB_TRUST_SERVER_CERTIFICATE=true` (self-signed certificate) |
+
+SSMS / Azure Data Studio: server `localhost,1433`, authentication *SQL Server Authentication*, tick *Trust server certificate*. Command line: `sqlcmd -S localhost,1433 -U tmo_app -P <password> -C -d TmoGradingQueue`. `tmo_app` is a plain application login without `BACKUP` permission — take backups with an administrator account.
+
+## Test data (hands-on testing of every role)
+
+```bash
+cd backend
+npm run prepare:test              # idempotent: staff1 account + stand-in signatures for every non-admin user + the full 16x5 queue (13:30, 15-min slots) for today
+npm run prepare:test -- --date 2026-05-17
+npm run reset:test -- --yes       # DESTRUCTIVE: deletes all scores/approvals and rewinds every queue item to WAITING (refuses without --yes, and in production)
+```
+
+Suggested round: log in as `committee1` (or `staff1`) → claim an item of the team leader's school (CMU) → enter scores → log in as `mentor1` → approve (PDF) → check `/committee/scoreboard` and the public board `/queue`. Run `reset:test` between rounds. **Never run `reset:test` once the real event has started** — it erases real scores.
 
 ## What's verified
 

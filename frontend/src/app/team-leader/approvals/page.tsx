@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
@@ -68,7 +69,7 @@ export default function TeamLeaderApprovalsPage() {
 
         <section className="card-soft p-5">
           <h2 className="mb-3 font-semibold text-ink-900">รออนุมัติ</h2>
-          {pending === null && !error && <p className="text-sm text-ink-500">กำลังโหลด...</p>}
+          {pending === null && !error && <PageSkeleton rows={2} />}
           {pending?.length === 0 && (
             <p className="text-sm text-ink-500">ไม่มีรายการรออนุมัติ</p>
           )}

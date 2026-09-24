@@ -105,7 +105,7 @@ export default function AdminStudentsPage() {
           type="file"
           accept=".csv,.xlsx"
           onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-          className="block text-sm text-ink-700"
+          className="block w-full max-w-md cursor-pointer text-sm text-ink-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-saed-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-saed-600 file:transition-colors hover:file:bg-saed-100"
         />
         <div className="flex gap-2">
           <Button variant="secondary" onClick={handlePreview} disabled={!file || busy}>

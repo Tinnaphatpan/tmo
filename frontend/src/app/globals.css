@@ -1,24 +1,24 @@
 @import "tailwindcss";
 
 /*
- * Design system — KMUTNB Red + Slate theme (replaces the earlier warm
- * vermilion/cream "saed" theme). Variable names kept as-is (--saed-*,
- * --ink-*, --background, etc.) so every existing component class still
- * resolves — only the color VALUES changed. No dark mode by design.
+ * Design system — "Calm Crimson": a cool neutral ground, white surfaces with
+ * one soft shadow, KMUTNB crimson (#C8102E) used sparingly as the accent.
+ * Variable names (--saed-*, --ink-*, --background …) are kept from earlier
+ * themes so every utility class keeps resolving — only values changed.
+ * No dark mode by design.
  */
 :root {
-  --background: #f8fafc;
+  --background: #f5f6f8;
   --surface: #ffffff;
-  --surface-sunken: #f1f5f9;
-  --line: #e2e8f0;
+  --surface-sunken: #eff1f4;
+  --line: #e4e7ec;
 
-  --ink-900: #0f172a;
-  --ink-700: #334155;
-  --ink-500: #64748b;
-  --ink-300: #94a3b8;
+  --ink-900: #101828;
+  --ink-700: #344054;
+  --ink-500: #667085;
+  --ink-300: #98a2b3;
 
-  /* KMUTNB Red ramp — #C8102E is primary, #9B0B22 is the dark/hover shade,
-     #FFF1F2 is the light tint; the rest of the ramp is derived to match. */
+  /* KMUTNB crimson ramp — #C8102E primary, #9B0B22 dark/hover. */
   --saed-50: #fff1f2;
   --saed-100: #ffe1e4;
   --saed-200: #ffc2c9;
@@ -28,7 +28,7 @@
   --saed-600: #a50d26;
   --saed-700: #9b0b22;
 
-  /* Queue status badges: WAITING/IN_PROGRESS/DONE */
+  /* Queue status badges */
   --state-queued-bg: #fef3c7;
   --state-queued-fg: #92400e;
   --state-queued-border: #fde68a;
@@ -45,13 +45,21 @@
   --state-pending-approval-fg: #075985;
   --state-pending-approval-border: #bae6fd;
 
-  /* Rotation schedule grid */
   --watermark-opacity: 0.07;
 
-  --grid-line: #e2e8f0;
-  --grid-head: #f1f5f9;
-  --grid-banner: #0f172a;
-  --grid-cell: #f8fafc;
+  --grid-line: #e4e7ec;
+  --grid-head: #eff1f4;
+  --grid-banner: #101828;
+  --grid-cell: #f5f6f8;
+
+  /* Shape + motion scale used by every component */
+  --radius-control: 12px;
+  --radius-card: 16px;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 14px -4px rgba(16, 24, 40, 0.07);
+  --shadow-pop: 0 8px 24px -6px rgba(16, 24, 40, 0.18);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
 
   --font-sans: var(--font-noto-thai), "Noto Sans Thai", sans-serif;
 }
@@ -97,25 +105,97 @@
   --font-sans: var(--font-sans);
 }
 
-html,
-body {
-  overflow-x: hidden;
-  background: var(--background);
-  color: var(--ink-900);
+@layer base {
+  html {
+    /* Reserve the scrollbar's space so pages don't shift sideways when a
+       list loads and the page becomes scrollable. */
+    scrollbar-gutter: stable;
+    background: var(--background);
+    color: var(--ink-900);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--ink-900);
+    /* `clip`, not `hidden`: `hidden` makes <body> a scroll container, which
+       silently breaks `position: sticky` (the sidebar scrolled away with the
+       page) and adds a second scroll layer. `clip` just trims overflow. */
+    overflow-x: clip;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Thin, standards-based scrollbars (no ::-webkit-scrollbar override, which
+     forces classic non-overlay bars and made scrolling feel heavier). */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #c9ced6 transparent;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  label:has(input[type="file"]) {
+    cursor: pointer;
+  }
+
+  /* Form controls: one consistent look + focus ring for every page. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    border-radius: var(--radius-control);
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+    border-color: var(--saed-500);
+    box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.14);
+  }
+  ::placeholder {
+    color: var(--ink-300);
+  }
+
+  a,
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :focus-visible {
+    outline: 2px solid rgba(200, 16, 46, 0.45);
+    outline-offset: 2px;
+  }
+
+  /* Tables: subtle row hover so long lists are easy to track while scrolling. */
+  tbody tr {
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
 }
 
+/* Kept for existing markup: a solid crimson (no gradient wash). */
 .saed-gradient {
-  background: linear-gradient(135deg, var(--saed-600), var(--saed-700));
-  color: #fff7f0;
+  background: var(--saed-500);
+  color: #fff;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+  box-shadow: 0 1px 2px rgba(155, 11, 34, 0.25);
+}
+.saed-gradient:hover:not(:disabled) {
+  background: var(--saed-600);
+  box-shadow: 0 4px 12px -2px rgba(155, 11, 34, 0.35);
 }
 
 .card-soft {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow:
-    0 2px 8px rgba(15, 23, 42, 0.06),
-    0 1px 3px rgba(15, 23, 42, 0.06);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 /* SPEC §3.4 — coarse-pointer (touch) devices only, so mouse/trackpad UIs
@@ -131,21 +211,6 @@ body {
   .no-print {
     display: none !important;
   }
-}
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: var(--surface-sunken);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--line);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--ink-300);
 }
 
 @keyframes slide-up {
@@ -184,12 +249,20 @@ body {
     opacity: 0.6;
   }
 }
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
 
 .animate-slide-up {
-  animation: slide-up 0.3s ease-out;
+  animation: slide-up var(--dur-base) var(--ease-out) both;
 }
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in var(--dur-base) var(--ease-out) both;
 }
 .animate-pulse-gold {
   animation: pulse-gold 2s ease-in-out infinite;
@@ -198,9 +271,29 @@ body {
   animation: soft-pulse 2s ease-in-out infinite;
 }
 
+/* Loading placeholder: keeps the page height stable instead of a lone
+   "กำลังโหลด..." line that makes everything jump when data arrives. */
+.skeleton {
+  border-radius: 10px;
+  background: linear-gradient(90deg, #eceff3 25%, #f6f7f9 37%, #eceff3 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Public queue board (/queue) — warm cream card + lavender grid, matching the
    familiar wall-poster look. Scoped to `.queue-board` so the rest of the
-   app keeps the Red/Slate theme. */
+   app keeps the Calm Crimson theme. */
 .queue-board {
   --qb-page: #ece6dc;
   --qb-card: #fdfaf4;

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
@@ -70,7 +71,7 @@ export default function AdminDashboardPage() {
   }
 
   if (error) return <p className="text-state-active-fg">{error}</p>;
-  if (!data) return <p className="text-ink-500">กำลังโหลด...</p>;
+  if (!data) return <PageSkeleton rows={4} />;
 
   return (
     <div className="space-y-6">

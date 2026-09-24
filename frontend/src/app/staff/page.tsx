@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { useQueueStream } from "@/lib/use-queue-stream";
@@ -47,7 +48,7 @@ export default function StaffPage() {
   }
 
   if (error) return <div className="p-6 text-state-active-fg">{error}</div>;
-  if (!data) return <div className="p-6 text-ink-500">กำลังโหลด...</div>;
+  if (!data) return <PageSkeleton />;
 
   const current = data.items.find((i) => i.id === data.currentItemId) ?? null;
   const waiting = data.items

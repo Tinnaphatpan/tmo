@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSkeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
 import { usePublicQueue } from "@/lib/use-public-queue";
 import { QueueBoardTable, boardBanner, buildBoardRows } from "@/components/QueueBoardTable";
@@ -25,7 +26,7 @@ export default function PublicQueuePage() {
           <h2 className="mb-4 text-2xl font-bold text-ink-900">ภาพรวมคิวทั้งหมด</h2>
 
           {!data ? (
-            <p className="py-8 text-center text-ink-500">กำลังโหลด...</p>
+            <PageSkeleton rows={8} />
           ) : rows.length === 0 ? (
             <p className="py-8 text-center text-ink-500">ยังไม่มีตารางคิว</p>
           ) : (

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { useQueueStream } from "@/lib/use-queue-stream";
@@ -39,7 +40,7 @@ export default function ScoreboardPage() {
       </header>
       <div className="mx-auto max-w-4xl overflow-x-auto rounded-xl border border-line bg-surface p-2">
         {error && <p className="p-4 text-state-active-fg">{error}</p>}
-        {!rows && !error && <p className="p-4 text-ink-500">กำลังโหลด...</p>}
+        {!rows && !error && <PageSkeleton rows={6} />}
         {rows && (
           <table className="w-full min-w-[560px] border-collapse text-sm">
             <thead>

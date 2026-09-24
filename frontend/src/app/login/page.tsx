@@ -38,10 +38,12 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="card-soft w-full max-w-sm p-8 animate-slide-up">
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4">
+      <div className="card-soft animate-slide-up w-full max-w-sm p-8">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-bold text-ink-900">TMO Grading Queue</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon.png" alt="" width={64} height={64} className="mx-auto mb-4 h-16 w-16 rounded-full" />
+          <h1 className="text-xl font-bold tracking-tight text-ink-900">TMO Grading Queue</h1>
           <p className="mt-1 text-sm text-ink-500">เข้าสู่ระบบเพื่อดำเนินการต่อ</p>
         </div>
 
@@ -56,7 +58,7 @@ function LoginForm() {
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
               required
-              className="touch-target w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink-900 outline-none focus:border-saed-500 focus:ring-1 focus:ring-saed-500"
+              className="touch-target w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-ink-900"
             />
           </div>
           <div>
@@ -70,7 +72,7 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
-              className="touch-target w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink-900 outline-none focus:border-saed-500 focus:ring-1 focus:ring-saed-500"
+              className="touch-target w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-ink-900"
             />
           </div>
 

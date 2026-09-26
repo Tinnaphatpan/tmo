@@ -4,6 +4,8 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, getApiErrorMessage } from "@/lib/api-client";
+import { useT } from "@/lib/i18n";
+import { LocaleSwitcher } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
 
 const ROLE_HOME: Record<string, string> = {
@@ -14,6 +16,7 @@ const ROLE_HOME: Record<string, string> = {
 };
 
 function LoginForm() {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState("");
@@ -31,26 +34,35 @@ function LoginForm() {
       router.push(callbackUrl || ROLE_HOME[data.user.role] || "/");
       router.refresh();
     } catch (err) {
-      setError(getApiErrorMessage(err, "เข้าสู่ระบบไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("เข้าสู่ระบบไม่สำเร็จ")));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-background px-4">
-      <div className="card-soft animate-slide-up w-full max-w-sm p-8">
+    <div className="flex min-h-dvh items-center justify-center login-bg px-4">
+      <div aria-hidden className="login-bg__photo" />
+      <div aria-hidden className="login-bg__overlay" />
+      <div aria-hidden className="login-bg__pattern" />
+      <div className="absolute right-4 top-4 z-10">
+        <LocaleSwitcher tone="dark" />
+      </div>
+      <div className="card-soft animate-slide-up relative w-full max-w-sm bg-white p-8 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.5)]">
         <div className="mb-6 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icon.png" alt="" width={64} height={64} className="mx-auto mb-4 h-16 w-16 rounded-full" />
           <h1 className="text-xl font-bold tracking-tight text-ink-900">TMO Grading Queue</h1>
-          <p className="mt-1 text-sm text-ink-500">เข้าสู่ระบบเพื่อดำเนินการต่อ</p>
+          <p className="mt-0.5 text-xs tracking-wide text-ink-300">
+            King Mongkut&apos;s University of Technology North Bangkok
+          </p>
+          <p className="mt-3 text-sm text-ink-500">{t("เข้าสู่ระบบเพื่อดำเนินการต่อ")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="username" className="mb-1 block text-sm font-medium text-ink-700">
-              ชื่อผู้ใช้
+              {t("ชื่อผู้ใช้")}
             </label>
             <input
               id="username"
@@ -63,7 +75,7 @@ function LoginForm() {
           </div>
           <div>
             <label htmlFor="password" className="mb-1 block text-sm font-medium text-ink-700">
-              รหัสผ่าน
+              {t("รหัสผ่าน")}
             </label>
             <input
               id="password"
@@ -82,14 +94,14 @@ function LoginForm() {
             </p>
           )}
 
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+          <Button type="submit" variant="crimson" disabled={loading} className="w-full">
+            {loading ? t("กำลังเข้าสู่ระบบ...") : t("เข้าสู่ระบบ")}
           </Button>
         </form>
 
         <div className="mt-6 border-t border-line pt-4 text-center">
           <Link href="/queue" className="text-sm font-medium text-saed-600 hover:underline">
-            ดูคิวทั้งหมด (ไม่ต้องเข้าสู่ระบบ)
+            {t("ดูคิวทั้งหมด (ไม่ต้องเข้าสู่ระบบ)")}
           </Link>
         </div>
       </div>

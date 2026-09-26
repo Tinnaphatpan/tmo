@@ -14,7 +14,8 @@ export interface PublicQueueItem {
   status: QueueStatus;
   position: number;
   scheduledAt: string | null;
-  school: SchoolRef;
+  /** studentCount: roster size only — no student names on the public board. */
+  school: SchoolRef & { studentCount?: number };
 }
 
 export interface StatusCounts {

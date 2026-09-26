@@ -6,18 +6,25 @@ import { api, getApiErrorMessage } from "@/lib/api-client";
 import { useQueueStream } from "@/lib/use-queue-stream";
 import type { MyQueueItem, MyQueueResult } from "@/lib/types";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useT } from "@/lib/i18n";
+import { SchoolLogo } from "@/components/SchoolLogo";
 import { Button } from "@/components/ui/Button";
 import { ScoreForm } from "@/components/ScoreForm";
-import { ScoreEditRequestModal } from "@/components/ScoreEditRequestModal";
+import { ScoreEditRequestModal } from "@/app/committee/_components/ScoreEditRequestModal";
+
+const UPCOMING_LIMIT = 3;
 
 export default function CommitteePage() {
+  const t = useT();
   const [data, setData] = useState<MyQueueResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [claimingId, setClaimingId] = useState<string | null>(null);
-  const [editModal, setEditModal] = useState<{ item: MyQueueItem; studentId: string } | null>(
-    null,
-  );
+  const [justSubmitted, setJustSubmitted] = useState(false);
+  const [editModal, setEditModal] = useState<{
+    item: MyQueueItem;
+    studentId: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -25,9 +32,9 @@ export default function CommitteePage() {
       setData(data);
       setError(null);
     } catch (err) {
-      setError(getApiErrorMessage(err, "โหลดข้อมูลไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("โหลดข้อมูลไม่สำเร็จ")));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -41,7 +48,7 @@ export default function CommitteePage() {
       await api.post(`/queue/${id}/claim`);
       await load();
     } catch (err) {
-      setActionError(getApiErrorMessage(err, "รับตรวจไม่สำเร็จ"));
+      setActionError(getApiErrorMessage(err, t("รับตรวจไม่สำเร็จ")));
     } finally {
       setClaimingId(null);
     }
@@ -53,7 +60,7 @@ export default function CommitteePage() {
       await api.post(`/queue/${id}/release`);
       await load();
     } catch (err) {
-      setActionError(getApiErrorMessage(err, "คืนคิวไม่สำเร็จ"));
+      setActionError(getApiErrorMessage(err, t("คืนคิวไม่สำเร็จ")));
     }
   }
 
@@ -65,7 +72,12 @@ export default function CommitteePage() {
   }
 
   const current = data.items.find((i) => i.id === data.currentItemId) ?? null;
-  const waiting = data.items.filter((i) => i.status === "WAITING");
+  const waitingAll = data.items
+    .filter((i) => i.status === "WAITING")
+    .sort((a, b) => a.position - b.position);
+  // Only the next few are announced ahead of time.
+  const waiting = waitingAll.slice(0, UPCOMING_LIMIT);
+  const nextItem = waitingAll[0] ?? null;
   const others = data.items.filter(
     (i) => i.status === "IN_PROGRESS" && i.id !== data.currentItemId,
   );
@@ -76,9 +88,11 @@ export default function CommitteePage() {
     <div className="px-4 py-6">
       <header className="mx-auto mb-6 max-w-4xl">
         <div>
-          <h1 className="text-lg font-bold text-ink-900">แผงกรรมการ</h1>
+          <h1 className="text-lg font-bold text-ink-900">{t("แผงกรรมการ")}</h1>
           {data.scoringLocked && (
-            <p className="text-sm text-state-active-fg">ปิดรับคะแนนแล้ว — ใช้ขอแก้ไขคะแนนแทน</p>
+            <p className="text-sm text-state-active-fg">
+              ปิดรับคะแนนแล้ว — ใช้ขอแก้ไขคะแนนแทน
+            </p>
           )}
         </div>
       </header>
@@ -91,43 +105,104 @@ export default function CommitteePage() {
         )}
 
         <section className="card-soft p-5">
-          <h2 className="mb-3 font-semibold text-ink-900">กำลังตรวจอยู่</h2>
+          <h2 className="mb-3 font-semibold text-ink-900">
+            {t("กำลังตรวจอยู่")}
+          </h2>
           {current ? (
             <div className="animate-fade-in">
               <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-ink-900">{current.school.name}</p>
-                  <p className="text-sm text-ink-500">ข้อ {current.problemNumber}</p>
+                  <p className="font-medium text-ink-900">
+                    <span className="inline-flex items-center gap-2">
+                      <SchoolLogo code={current.school.code} size={28} />
+                      {current.school.name}
+                    </span>
+                  </p>
+                  <p className="text-sm text-ink-500">
+                    {t("ข้อ {n}", { n: current.problemNumber })}
+                  </p>
                 </div>
-                <Button variant="secondary" onClick={() => handleRelease(current.id)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => handleRelease(current.id)}
+                >
                   คืนคิว
                 </Button>
               </div>
-              <ScoreForm item={current} onSubmitted={load} />
+              <ScoreForm
+                item={current}
+                onSubmitted={() => {
+                  setJustSubmitted(true);
+                  load();
+                }}
+              />
             </div>
           ) : (
-            <p className="text-sm text-ink-500">เลือกจากคิวรอตรวจด้านล่าง</p>
+            <div className="animate-fade-in flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-ink-500">
+                {justSubmitted
+                  ? t("ส่งคะแนนเพื่อรออนุมัติจากหัวหน้าทีมแล้ว ✓")
+                  : t("เลือกจากคิวรอตรวจด้านล่าง")}
+              </p>
+              {nextItem && (
+                <Button
+                  variant="next"
+                  disabled={claimingId === nextItem.id}
+                  onClick={() => {
+                    setJustSubmitted(false);
+                    handleClaim(nextItem.id);
+                  }}
+                >
+                  {claimingId === nextItem.id
+                    ? t("กำลังรับ...")
+                    : t("คิวถัดไป: {school} ข้อ {n} →", {
+                        school: nextItem.school.name,
+                        n: nextItem.problemNumber,
+                      })}
+                </Button>
+              )}
+            </div>
           )}
         </section>
 
         <section className="card-soft p-5">
-          <h2 className="mb-3 font-semibold text-ink-900">รอตรวจ</h2>
+          <h2 className="mb-3 flex items-center justify-between font-semibold text-ink-900">
+            <span>{t("คิวถัดไป")}</span>
+            {waitingAll.length > UPCOMING_LIMIT && (
+              <span className="text-xs font-normal text-ink-500">
+                {t("แสดง {shown} จาก {total} คิว", {
+                  shown: UPCOMING_LIMIT,
+                  total: waitingAll.length,
+                })}
+              </span>
+            )}
+          </h2>
           {waiting.length === 0 ? (
-            <p className="text-sm text-ink-500">ไม่มีรายการรอตรวจ</p>
+            <p className="text-sm text-ink-500">{t("ไม่มีคิวรอตรวจ")}</p>
           ) : (
             <ul className="divide-y divide-line">
               {waiting.map((item) => (
-                <li key={item.id} className="flex items-center justify-between py-3">
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between py-3"
+                >
                   <div>
-                    <p className="font-medium text-ink-900">{item.school.name}</p>
-                    <p className="text-sm text-ink-500">ข้อ {item.problemNumber}</p>
+                    <p className="font-medium text-ink-900">
+                      <span className="inline-flex items-center gap-2">
+                        <SchoolLogo code={item.school.code} size={28} />
+                        {item.school.name}
+                      </span>
+                    </p>
+                    <p className="text-sm text-ink-500">
+                      {t("ข้อ {n}", { n: item.problemNumber })}
+                    </p>
                   </div>
                   <Button
-                    variant="secondary"
+                    variant="next"
                     disabled={holdingAnother || claimingId === item.id}
                     onClick={() => handleClaim(item.id)}
                   >
-                    {claimingId === item.id ? "กำลังรับ..." : "รับตรวจ"}
+                    {claimingId === item.id ? t("กำลังรับ...") : t("รับตรวจ")}
                   </Button>
                 </li>
               ))}
@@ -136,16 +211,28 @@ export default function CommitteePage() {
         </section>
 
         <section className="card-soft p-5">
-          <h2 className="mb-3 font-semibold text-ink-900">กรรมการท่านอื่นกำลังตรวจ</h2>
+          <h2 className="mb-3 font-semibold text-ink-900">
+            {t("กรรมการท่านอื่นกำลังตรวจ")}
+          </h2>
           {others.length === 0 ? (
-            <p className="text-sm text-ink-500">ไม่มีรายการ</p>
+            <p className="text-sm text-ink-500">{t("ไม่มีรายการ")}</p>
           ) : (
             <ul className="divide-y divide-line">
               {others.map((item) => (
-                <li key={item.id} className="flex items-center justify-between py-3">
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between py-3"
+                >
                   <div>
-                    <p className="font-medium text-ink-900">{item.school.name}</p>
-                    <p className="text-sm text-ink-500">ข้อ {item.problemNumber}</p>
+                    <p className="font-medium text-ink-900">
+                      <span className="inline-flex items-center gap-2">
+                        <SchoolLogo code={item.school.code} size={28} />
+                        {item.school.name}
+                      </span>
+                    </p>
+                    <p className="text-sm text-ink-500">
+                      {t("ข้อ {n}", { n: item.problemNumber })}
+                    </p>
                   </div>
                   <StatusBadge status={item.status} />
                 </li>
@@ -155,9 +242,11 @@ export default function CommitteePage() {
         </section>
 
         <section className="card-soft p-5">
-          <h2 className="mb-3 font-semibold text-ink-900">ตรวจแล้ว</h2>
+          <h2 className="mb-3 font-semibold text-ink-900">{t("ตรวจแล้ว")}</h2>
           {done.length === 0 ? (
-            <p className="text-sm text-ink-500">ยังไม่มีรายการที่ตรวจเสร็จ</p>
+            <p className="text-sm text-ink-500">
+              {t("ยังไม่มีรายการที่ตรวจเสร็จ")}
+            </p>
           ) : (
             <ul className="divide-y divide-line">
               {done.map((item) => {
@@ -166,13 +255,25 @@ export default function CommitteePage() {
                   <li key={item.id} className="py-3">
                     <div className="mb-2 flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-ink-900">{item.school.name}</p>
+                        <p className="font-medium text-ink-900">
+                          <span className="inline-flex items-center gap-2">
+                            <SchoolLogo code={item.school.code} size={28} />
+                            {item.school.name}
+                          </span>
+                        </p>
                         <p className="text-sm text-ink-500">
-                          ข้อ {item.problemNumber} · รวม {total.toFixed(2)} คะแนน
+                          {t("ข้อ {n} · รวม {total} คะแนน", {
+                            n: item.problemNumber,
+                            total: total.toFixed(2),
+                          })}
                         </p>
                       </div>
                       <StatusBadge
-                        status={item.approvalStatus === "APPROVED" ? "APPROVED" : "PENDING_APPROVAL"}
+                        status={
+                          item.approvalStatus === "APPROVED"
+                            ? "APPROVED"
+                            : "PENDING_APPROVAL"
+                        }
                       />
                     </div>
                     {data.scoringLocked && (
@@ -185,7 +286,9 @@ export default function CommitteePage() {
                           return (
                             <button
                               key={student.id}
-                              onClick={() => setEditModal({ item, studentId: student.id })}
+                              onClick={() =>
+                                setEditModal({ item, studentId: student.id })
+                              }
                               className="touch-target rounded-lg border border-line bg-surface-sunken px-2 py-1 text-xs text-ink-700 hover:border-saed-400"
                             >
                               {student.studentCode}: {score.value.toFixed(2)}

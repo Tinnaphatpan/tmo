@@ -122,10 +122,10 @@ describe("/queue page", () => {
 
   it("shows the title, the board, the counts and the CSV link", async () => {
     usePublicQueue.mockReturnValue(data());
-    const { default: Page } = await import("@/app/queue/page");
+    const { default: Page } = await import("@/app/(public)/queue/page");
     render(<Page />);
     expect(screen.getByText("TMO Queue Board")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "ภาพรวมคิวทั้งหมด" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "ตารางคิวรวม" })).toBeInTheDocument();
     expect(screen.getByText("KKU")).toBeInTheDocument();
     expect(screen.getByText(/รอตรวจ 3 · กำลังตรวจ 1 · ตรวจแล้ว 1 จากทั้งหมด 5/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /ดาวน์โหลดตารางเวลา/ })).toHaveAttribute("href", "/api/bff/schedule/export");
@@ -146,7 +146,7 @@ describe("/queue page", () => {
         })),
       }),
     );
-    const { default: Page } = await import("@/app/queue/page");
+    const { default: Page } = await import("@/app/(public)/queue/page");
     render(<Page />);
     expect(screen.queryByText("ยังไม่มีตารางคิว")).toBeNull();
     expect(screen.getByText("CODE0")).toBeInTheDocument();
@@ -155,7 +155,7 @@ describe("/queue page", () => {
   });
 
   it("loading and empty states", async () => {
-    const { default: Page } = await import("@/app/queue/page");
+    const { default: Page } = await import("@/app/(public)/queue/page");
     usePublicQueue.mockReturnValue(null);
     const { unmount } = render(<Page />);
     expect(screen.getByText("กำลังโหลด...")).toBeInTheDocument();

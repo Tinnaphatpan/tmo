@@ -1,9 +1,17 @@
 import { ButtonHTMLAttributes } from "react";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+/**
+ * Colour language: green = confirm/submit (primary), blue = next/proceed,
+ * amber = waiting/hold, soft red = destructive, neutral = everything else.
+ */
+type Variant = "primary" | "crimson" | "orange" | "next" | "wait" | "secondary" | "ghost" | "danger";
 
 const VARIANT_CLASSES: Record<Variant, string> = {
-  primary: "saed-gradient disabled:opacity-50 disabled:shadow-none",
+  primary: "btn-success disabled:opacity-50 disabled:shadow-none",
+  crimson: "btn-crimson disabled:opacity-50 disabled:shadow-none",
+  orange: "btn-orange disabled:opacity-50 disabled:shadow-none",
+  next: "btn-next disabled:opacity-50 disabled:shadow-none",
+  wait: "btn-wait disabled:opacity-50 disabled:shadow-none",
   secondary:
     "bg-surface border border-line text-ink-900 shadow-[0_1px_2px_rgba(16,24,40,0.05)] hover:border-ink-300 hover:bg-surface-sunken disabled:opacity-50",
   ghost: "text-ink-700 hover:bg-surface-sunken hover:text-ink-900 disabled:opacity-50",

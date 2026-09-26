@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { StudentsRepository } from '../../students/students.repository';
 import { ProblemCounts, QueueItemWithSchool, QueueRepository, StatusCounts } from '../queue.repository';
 
 export interface PublicQueueItem {
@@ -7,7 +8,8 @@ export interface PublicQueueItem {
   status: string;
   position: number;
   scheduledAt: string | null;
-  school: { id: string; name: string; code: string | null };
+  /** studentCount = roster size only (no names — the board is public). */
+  school: { id: string; name: string; code: string | null; studentCount: number };
 }
 
 export interface PublicQueueSlotCell {
@@ -27,14 +29,14 @@ export interface PublicQueueResult {
   updatedAt: string;
 }
 
-function toPublicItem(item: QueueItemWithSchool): PublicQueueItem {
+function toPublicItem(item: QueueItemWithSchool, studentCount: number): PublicQueueItem {
   return {
     id: item.id,
     problemNumber: item.problemNumber,
     status: item.status,
     position: item.position,
     scheduledAt: item.scheduledAt ? item.scheduledAt.toISOString() : null,
-    school: { id: item.schoolId, name: item.schoolName, code: item.schoolCode },
+    school: { id: item.schoolId, name: item.schoolName, code: item.schoolCode, studentCount },
   };
 }
 
@@ -46,12 +48,18 @@ function toPublicItem(item: QueueItemWithSchool): PublicQueueItem {
  */
 @Injectable()
 export class GetPublicQueueUseCase {
-  constructor(private readonly queueRepository: QueueRepository) {}
+  constructor(
+    private readonly queueRepository: QueueRepository,
+    private readonly studentsRepository: StudentsRepository,
+  ) {}
 
   async execute(): Promise<PublicQueueResult> {
     const items = await this.queueRepository.findAllWithSchool();
     const counts = await this.queueRepository.countByStatus();
     const byProblem = await this.queueRepository.countByProblem();
+    const students = await this.studentsRepository.findBySchools([...new Set(items.map((i) => i.schoolId))]);
+    const studentCounts = new Map<string, number>();
+    for (const s of students) studentCounts.set(s.schoolId, (studentCounts.get(s.schoolId) ?? 0) + 1);
     const problemNumbers = [...new Set(items.map((i) => i.problemNumber))].sort((a, b) => a - b);
 
     const bySlot = new Map<string, QueueItemWithSchool[]>();
@@ -82,7 +90,7 @@ export class GetPublicQueueUseCase {
       scheduledTimes.length > 0 ? new Date(Math.min(...scheduledTimes)).toISOString() : null;
 
     return {
-      items: items.map(toPublicItem),
+      items: items.map((i) => toPublicItem(i, studentCounts.get(i.schoolId) ?? 0)),
       counts,
       problemNumbers,
       byProblem,

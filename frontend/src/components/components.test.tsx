@@ -124,14 +124,14 @@ describe("AppSidebar", () => {
     render(<AppSidebar title="t" nav={nav}>x</AppSidebar>);
     const [home] = screen.getAllByRole("link", { name: "ภาพรวม" });
     const [schools] = screen.getAllByRole("link", { name: "โรงเรียน" });
-    expect(schools.className).toContain("bg-saed-500");
-    expect(home.className).not.toContain("bg-saed-500");
+    expect(schools.className).toContain("nav-active");
+    expect(home.className).not.toContain("nav-active");
   });
 
   it("marks the parent item active on its own path", () => {
     pathname = "/admin";
     render(<AppSidebar title="t" nav={nav}>x</AppSidebar>);
-    expect(screen.getAllByRole("link", { name: "ภาพรวม" })[0].className).toContain("bg-saed-500");
+    expect(screen.getAllByRole("link", { name: "ภาพรวม" })[0].className).toContain("nav-active");
   });
 
   it("mobile drawer opens from the menu button and closes via the backdrop", async () => {

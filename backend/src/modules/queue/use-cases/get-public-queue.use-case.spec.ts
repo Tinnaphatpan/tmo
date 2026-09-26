@@ -1,4 +1,5 @@
 import { GetPublicQueueUseCase } from './get-public-queue.use-case';
+import { FakeStudentsRepository } from '../../../testing/fake-students.repository';
 import { FakeQueueRepository, makeQueueItem } from '../../../testing/fake-queue.repository';
 
 describe('GetPublicQueueUseCase (SPEC §2.5 public board)', () => {
@@ -11,7 +12,7 @@ describe('GetPublicQueueUseCase (SPEC §2.5 public board)', () => {
     repo.seed(makeQueueItem({ id: 'b', problemNumber: 1, scheduledAt: t1, status: 'IN_PROGRESS' }));
     repo.seed(makeQueueItem({ id: 'c', problemNumber: 2, scheduledAt: t1, schoolId: 's2' }));
     repo.seed(makeQueueItem({ id: 'd', problemNumber: 3, scheduledAt: null, schoolId: 's3' }));
-    return new GetPublicQueueUseCase(repo);
+    return new GetPublicQueueUseCase(repo, new FakeStudentsRepository());
   }
 
   it('lists sorted distinct problem numbers and status counts', async () => {
@@ -38,7 +39,7 @@ describe('GetPublicQueueUseCase (SPEC §2.5 public board)', () => {
   });
 
   it('empty queue: no slots, null scheduleDate', async () => {
-    const res = await new GetPublicQueueUseCase(new FakeQueueRepository()).execute();
+    const res = await new GetPublicQueueUseCase(new FakeQueueRepository(), new FakeStudentsRepository()).execute();
     expect(res).toMatchObject({ items: [], slots: [], scheduleDate: null, problemNumbers: [] });
   });
 });

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
+import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
 import type { MyQueueItem } from "@/lib/types";
 
@@ -24,6 +25,7 @@ interface ScoreFormProps {
 
 /** SPEC §5.2 — grid input 0-10 step 0.5 for every student in the school; submit disabled until all are filled and valid. */
 export function ScoreForm({ item, onSubmitted }: ScoreFormProps) {
+  const t = useT();
   const initial = useMemo(() => {
     const map: Record<string, string> = {};
     for (const student of item.school.students) {
@@ -52,7 +54,7 @@ export function ScoreForm({ item, onSubmitted }: ScoreFormProps) {
       sessionStorage.setItem(draftKey(item.id), JSON.stringify(values));
       setDraftSaved(true);
     } catch {
-      setError("บันทึกฉบับร่างไม่สำเร็จ");
+      setError(t("บันทึกฉบับร่างไม่สำเร็จ"));
     }
   }
 
@@ -68,7 +70,7 @@ export function ScoreForm({ item, onSubmitted }: ScoreFormProps) {
       } catch {}
       onSubmitted();
     } catch (err) {
-      setError(getApiErrorMessage(err, "บันทึกคะแนนไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("บันทึกคะแนนไม่สำเร็จ")));
     } finally {
       setSubmitting(false);
     }
@@ -107,10 +109,10 @@ export function ScoreForm({ item, onSubmitted }: ScoreFormProps) {
 
       <div className="flex gap-2">
         <Button variant="secondary" onClick={handleSaveDraft} disabled={submitting}>
-          {draftSaved ? "บันทึกร่างแล้ว ✓" : "บันทึกร่าง"}
+          {draftSaved ? t("บันทึกร่างแล้ว ✓") : t("บันทึกร่าง")}
         </Button>
         <Button onClick={handleSubmit} disabled={!allValid || submitting} className="flex-1">
-          {submitting ? "กำลังบันทึก..." : "ส่งคะแนนเพื่อรออนุมัติ"}
+          {submitting ? t("กำลังบันทึก...") : t("ส่งคะแนนเพื่อรออนุมัติ")}
         </Button>
       </div>
     </div>

@@ -5,6 +5,14 @@ import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
 import type { StatusCounts } from "@/lib/types";
+import { useQueueStream } from "@/lib/use-queue-stream";
+import { usePublicQueue } from "@/lib/use-public-queue";
+import { ProblemStatusCards } from "@/components/ProblemStatusCards";
+import {
+  QueueBoardTable,
+  boardBanner,
+  buildBoardRows,
+} from "@/components/QueueBoardTable";
 
 interface StaleItem {
   id: string;
@@ -24,16 +32,38 @@ interface DashboardResult {
   scoringLocked: boolean;
 }
 
-function StatCard({ label, value }: { label: string; value: number | string }) {
+const TONES = {
+  amber: "from-yellow-300 to-yellow-500",
+  crimson: "from-blue-400 to-blue-600",
+  green: "from-green-400 to-green-600",
+  slate: "from-slate-300 to-slate-400",
+} as const;
+
+function StatCard({
+  label,
+  value,
+  tone = "slate",
+}: {
+  label: string;
+  value: number | string;
+  tone?: keyof typeof TONES;
+}) {
   return (
-    <div className="card-soft p-4">
+    <div className="card-soft relative overflow-hidden p-4 pl-5">
+      <span
+        className={`absolute inset-y-3 left-0 w-1 rounded-r-full bg-gradient-to-b ${TONES[tone]}`}
+      />
       <p className="text-sm text-ink-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-ink-900">{value}</p>
+      <p className="mt-1 text-2xl font-bold tabular-nums text-ink-900">
+        {value}
+      </p>
     </div>
   );
 }
 
 export default function AdminDashboardPage() {
+  const live = usePublicQueue();
+  const rows = live ? buildBoardRows(live) : [];
   const [data, setData] = useState<DashboardResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toggling, setToggling] = useState(false);
@@ -47,9 +77,21 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
+  // Initial fetch: setState only runs in the promise callback, not synchronously in the effect.
   useEffect(() => {
-    load();
-  }, [load]);
+    let active = true;
+    api
+      .get<DashboardResult>("/admin/dashboard")
+      .then(({ data }) => active && setData(data))
+      .catch(
+        (err) =>
+          active && setError(getApiErrorMessage(err, "โหลดข้อมูลไม่สำเร็จ")),
+      );
+    return () => {
+      active = false;
+    };
+  }, []);
+  useQueueStream(load);
 
   async function handleToggleLock() {
     if (!data) return;
@@ -87,15 +129,57 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="รอตรวจ" value={data.queueCounts.waiting} />
-        <StatCard label="กำลังตรวจ" value={data.queueCounts.inProgress} />
-        <StatCard label="ตรวจแล้ว" value={data.queueCounts.done} />
+        <StatCard
+          tone="amber"
+          label="รอตรวจ"
+          value={data.queueCounts.waiting}
+        />
+        <StatCard
+          tone="crimson"
+          label="กำลังตรวจ"
+          value={data.queueCounts.inProgress}
+        />
+        <StatCard tone="green" label="ตรวจแล้ว" value={data.queueCounts.done} />
         <StatCard label="โรงเรียน" value={data.schoolCount} />
         <StatCard label="กรรมการ" value={data.committeeCount} />
         <StatCard label="นักเรียน" value={data.studentCount} />
         <StatCard label="กรอกคะแนนครบแล้ว" value={data.schoolsFullyScored} />
         <StatCard label="คำขอแก้ไขค้าง" value={data.pendingEditRequestCount} />
       </div>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-bold text-ink-900">สถานะแต่ละข้อ</h3>
+          <span className="inline-flex items-center gap-1.5 text-xs text-ink-500">
+            <span className="animate-soft-pulse h-2 w-2 rounded-full bg-green-500" />
+            Live
+          </span>
+        </div>
+        {live ? (
+          <div className="queue-board">
+            <ProblemStatusCards data={live} />
+          </div>
+        ) : (
+          <PageSkeleton rows={3} />
+        )}
+      </section>
+
+      <section className="queue-board card-soft p-4 sm:p-5">
+        <h3 className="mb-3 text-base font-bold text-ink-900">ตารางคิวรวม</h3>
+        {!live ? (
+          <PageSkeleton rows={6} />
+        ) : rows.length === 0 ? (
+          <p className="py-6 text-center text-sm text-ink-500">
+            ยังไม่มีตารางคิว
+          </p>
+        ) : (
+          <QueueBoardTable
+            rows={rows}
+            problemNumbers={live.problemNumbers}
+            banner={boardBanner(live.slots)}
+          />
+        )}
+      </section>
 
       {data.staleItems.length > 0 && (
         <div className="card-soft border-l-4 border-l-saed-500 p-4">

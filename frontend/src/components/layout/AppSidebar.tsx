@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT } from "@/lib/i18n";
+import { LocaleSwitcher } from "@/lib/i18n";
 import { LogoutButton } from "@/components/LogoutButton";
 
 export interface NavItem {
@@ -26,17 +28,11 @@ function Brand({ title }: { title: string }) {
   );
 }
 
-/** Shared role shell: sticky slate sidebar on md+, top bar + slide-over drawer
- * below that (committee works on tablets). Hidden entirely when printing.
- *
- * The desktop sidebar is `sticky` with its own fixed height and `self-start`:
- * it stays put while the page scrolls (requires <body> not to be a scroll
- * container — see globals.css), and scrolls internally if the menu is long. */
 export function AppSidebar({ title, nav, children }: AppSidebarProps) {
+  const t = useT();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // Longest-prefix match so /admin doesn't stay active on /admin/schools.
   const activeHref = nav
     .filter((n) => pathname === n.href || pathname.startsWith(`${n.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
@@ -53,11 +49,11 @@ export function AppSidebar({ title, nav, children }: AppSidebarProps) {
             aria-current={active ? "page" : undefined}
             className={`touch-target rounded-xl px-3 py-2.5 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ease-out ${
               active
-                ? "bg-saed-500 text-white shadow-[0_2px_8px_-2px_rgba(200,16,46,0.6)]"
+                ? "nav-active text-white"
                 : "text-ink-300 hover:bg-white/10 hover:text-white"
             }`}
           >
-            {item.label}
+            {t(item.label)}
           </Link>
         );
       })}
@@ -67,10 +63,13 @@ export function AppSidebar({ title, nav, children }: AppSidebarProps) {
   const panel = (
     <>
       <div className="px-5 py-5">
-        <Brand title={title} />
+        <Brand title={t(title)} />
       </div>
       {links}
       <div className="border-t border-white/10 p-3 [&_button]:w-full [&_button]:text-ink-300 [&_button:hover]:text-white">
+        <div className="mb-2 px-1">
+          <LocaleSwitcher tone="dark" />
+        </div>
         <LogoutButton />
       </div>
     </>
@@ -83,10 +82,10 @@ export function AppSidebar({ title, nav, children }: AppSidebarProps) {
       </aside>
 
       <header className="sticky top-0 z-30 flex items-center justify-between bg-ink-900 px-4 py-2.5 md:hidden print:hidden">
-        <Brand title={title} />
+        <Brand title={t(title)} />
         <button
           type="button"
-          aria-label="เมนู"
+          aria-label={t("เมนู")}
           aria-expanded={open}
           onClick={() => setOpen(true)}
           className="touch-target rounded-lg px-3 text-xl text-white transition-colors hover:bg-white/10"
@@ -99,7 +98,7 @@ export function AppSidebar({ title, nav, children }: AppSidebarProps) {
         <div className="fixed inset-0 z-40 md:hidden print:hidden">
           <button
             type="button"
-            aria-label="ปิดเมนู"
+            aria-label={t("ปิดเมนู")}
             className="animate-fade-in absolute inset-0 bg-black/50"
             onClick={() => setOpen(false)}
           />

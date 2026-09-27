@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { MentorScoreTable, type EditTarget } from "@/app/team-leader/_components/MentorScoreTable";
 import { ScoreEditRequestModal } from "@/app/committee/_components/ScoreEditRequestModal";
 import { useQueueStream } from "@/lib/use-queue-stream";
+import { usePendingEditRequests } from "@/lib/use-pending-edit-requests";
 import { useTeamLeaderReport } from "@/lib/use-team-leader-report";
 
 interface PendingScore {
@@ -38,6 +39,7 @@ export default function TeamLeaderApprovalsPage() {
   const [error, setError] = useState<string | null>(null);
   const { report } = useTeamLeaderReport();
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+  const { scoreIds: pendingScoreIds } = usePendingEditRequests();
   const [sent, setSent] = useState(false);
 
   const load = useCallback(async () => {
@@ -122,11 +124,23 @@ export default function TeamLeaderApprovalsPage() {
                       </thead>
                       <tbody>
                         {(item.scores ?? []).map((sc) => (
-                          <tr key={sc.studentCode} className="odd:bg-white even:bg-surface-sunken/60">
+                          <tr
+                            key={sc.studentCode}
+                            className={
+                              sc.scoreId && pendingScoreIds.has(sc.scoreId)
+                                ? "bg-red-50 shadow-[inset_6px_0_0_#c8102e]"
+                                : "odd:bg-white even:bg-surface-sunken/60"
+                            }
+                          >
                             <td className="border border-line px-3 py-2 text-ink-900">{sc.studentCode}</td>
                             <td className="border border-line px-3 py-2 text-ink-900">{sc.studentName}</td>
                             <td className="border border-line px-3 py-2 text-center font-semibold text-ink-900">
                               {sc.value === null ? "-" : sc.value.toFixed(2)}
+                              {sc.scoreId && pendingScoreIds.has(sc.scoreId) && (
+                                <span className="ml-2 rounded-full bg-[#c8102e] px-2 py-0.5 text-xs font-medium text-white">
+                                  {t("edit_requested")}
+                                </span>
+                              )}
                             </td>
                             <td className="border border-line px-3 py-2 text-center">
                               {sc.scoreId && sc.value !== null && (

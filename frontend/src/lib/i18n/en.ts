@@ -246,4 +246,6 @@ export const EN: Record<string, string> = {
   requests_from_the_team_leader_for_you_to_rev: "Requests from the team leader (for you to review)",
   request_history: "Request history",
   your_request: "Your request",
+  edit_requested: "Edit requested — pending",
+  edit_requests_pending_banner: "{count} score edit request(s) pending",
 };

@@ -246,4 +246,6 @@ export const TH: Record<string, string> = {
   requests_from_the_team_leader_for_you_to_rev: "คำขอจากหัวหน้าทีม (ให้คุณพิจารณา)",
   request_history: "ประวัติคำขอ",
   your_request: "คำขอของคุณ",
+  edit_requested: "ขอแก้ไขแล้ว — รอพิจารณา",
+  edit_requests_pending_banner: "มีคำขอแก้ไขคะแนนรอดำเนินการ {count} รายการ",
 };

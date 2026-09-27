@@ -34,6 +34,7 @@ interface DashboardResult {
 }
 
 const TONES = {
+  red: "from-red-500 to-red-700",
   amber: "from-yellow-300 to-yellow-500",
   crimson: "from-blue-400 to-blue-600",
   green: "from-green-400 to-green-600",
@@ -130,6 +131,13 @@ export default function AdminDashboardPage() {
         </Button>
       </div>
 
+      {data.pendingEditRequestCount > 0 && (
+        <p role="alert" className="flex items-center gap-2 rounded-xl bg-[#c8102e] px-4 py-3 text-sm font-semibold text-white shadow-md">
+          <span aria-hidden>⚠</span>
+          {t("edit_requests_pending_banner", { count: data.pendingEditRequestCount })}
+        </p>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
           tone="amber"
@@ -146,7 +154,11 @@ export default function AdminDashboardPage() {
         <StatCard label={t("committee")} value={data.committeeCount} />
         <StatCard label={t("students")} value={data.studentCount} />
         <StatCard label={t("fully_scored")} value={data.schoolsFullyScored} />
-        <StatCard label={t("pending_edit_requests")} value={data.pendingEditRequestCount} />
+        <StatCard
+          tone={data.pendingEditRequestCount > 0 ? "red" : "slate"}
+          label={t("pending_edit_requests")}
+          value={data.pendingEditRequestCount}
+        />
       </div>
 
       <section className="space-y-3">

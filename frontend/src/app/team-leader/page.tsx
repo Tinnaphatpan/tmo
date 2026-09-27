@@ -4,6 +4,7 @@ import { useT } from "@/lib/i18n";
 import { useState } from "react";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
+import { usePendingEditRequests } from "@/lib/use-pending-edit-requests";
 import { useTeamLeaderReport } from "@/lib/use-team-leader-report";
 import { MentorScoreTable, type EditTarget } from "@/app/team-leader/_components/MentorScoreTable";
 import { ScoreEditRequestModal } from "@/app/committee/_components/ScoreEditRequestModal";
@@ -13,6 +14,7 @@ export default function TeamLeaderPage() {
   const t = useT();
   const { report, error } = useTeamLeaderReport();
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+  const { scoreIds: pendingScoreIds } = usePendingEditRequests();
   const [sent, setSent] = useState(false);
 
   return (
@@ -46,6 +48,7 @@ export default function TeamLeaderPage() {
         {report && (
           <MentorScoreTable
             report={report}
+            pendingScoreIds={pendingScoreIds}
             onRequestEdit={(target) => {
               setSent(false);
               setEditTarget(target);

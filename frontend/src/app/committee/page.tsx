@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useT } from "@/lib/i18n";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { Button } from "@/components/ui/Button";
+import { usePendingEditRequests } from "@/lib/use-pending-edit-requests";
 import { ScoreForm } from "@/components/ScoreForm";
 import { ScoreEditRequestModal } from "@/app/committee/_components/ScoreEditRequestModal";
 
@@ -20,6 +21,7 @@ export default function CommitteePage() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const { scoreIds: pendingScoreIds } = usePendingEditRequests();
   const [justSubmitted, setJustSubmitted] = useState(false);
   const [editModal, setEditModal] = useState<{
     item: MyQueueItem;
@@ -256,8 +258,15 @@ export default function CommitteePage() {
             <ul className="divide-y divide-line">
               {done.map((item) => {
                 const total = item.scores.reduce((sum, s) => sum + s.value, 0);
+                const flagged = item.scores.some((s) => pendingScoreIds.has(s.id));
                 return (
-                  <li key={item.id} className="py-3">
+                  <li
+                    key={item.id}
+                    className={`py-3 ${flagged ? "-mx-2 rounded-lg bg-red-50 px-2 shadow-[inset_6px_0_0_#c8102e] pl-4" : ""}`}
+                  >
+                    {flagged && (
+                      <p className="mb-1 text-xs font-semibold text-[#c8102e]">⚠ {t("edit_requested")}</p>
+                    )}
                     <div className="mb-2 flex items-center justify-between">
                       <div>
                         <p className="font-medium text-ink-900">

@@ -13,10 +13,13 @@ export interface EditTarget {
 export function MentorScoreTable({
   report,
   onRequestEdit,
+  pendingScoreIds,
 }: {
   report: TeamLeaderReport;
   /** When given, every scored cell gets an "ขอแก้ไข" button (per-student edit request). */
   onRequestEdit?: (target: EditTarget) => void;
+  /** Scores with a pending edit request get a red strip. */
+  pendingScoreIds?: Set<string>;
 }) {
   const t = useT();
   return (
@@ -41,8 +44,15 @@ export function MentorScoreTable({
               <td className="border border-line px-3 py-2 text-ink-900">{row.name}</td>
               {row.scores.map((score, i) => {
                 const scoreId = row.scoreIds?.[i] ?? null;
+                const flagged = !!scoreId && !!pendingScoreIds?.has(scoreId);
                 return (
-                  <td key={i} className="border border-line px-3 py-2 text-center text-ink-700">
+                  <td
+                    key={i}
+                    title={flagged ? t("edit_requested") : undefined}
+                    className={`border border-line px-3 py-2 text-center text-ink-700 ${
+                      flagged ? "border-l-4 bg-red-50 font-semibold text-[#c8102e] [border-left-color:#c8102e_!important]" : ""
+                    }`}
+                  >
                     <span>{score === null ? "-" : score.toFixed(2)}</span>
                     {onRequestEdit && score !== null && scoreId && (
                       <button

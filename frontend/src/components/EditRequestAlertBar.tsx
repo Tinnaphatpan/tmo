@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api-client";
-import { useQueueStream } from "@/lib/use-queue-stream";
+import { usePendingEditRequests } from "@/lib/use-pending-edit-requests";
 import { useT } from "@/lib/i18n";
 
 /** A score-edit request as returned by GET /score-edit-requests (caller-scoped). */
@@ -31,21 +29,7 @@ export interface ScoreEditRequestItem {
  */
 export function EditRequestAlertBar({ href }: { href: string }) {
   const t = useT();
-  const [count, setCount] = useState(0);
-
-  const load = useCallback(async () => {
-    try {
-      const { data } = await api.get<ScoreEditRequestItem[]>("/score-edit-requests");
-      setCount(data.filter((r) => r.status === "PENDING").length);
-    } catch {
-      /* a failed poll must never block the page */
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-  useQueueStream(load);
+  const count = usePendingEditRequests().pending.length;
 
   if (count === 0) return null;
   return (

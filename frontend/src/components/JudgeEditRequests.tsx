@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePenLine } from "@/components/ui/icons";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { useQueueStream } from "@/lib/use-queue-stream";
@@ -57,7 +58,10 @@ export function JudgeEditRequests() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-      <h1 className="text-lg font-bold text-ink-900">{t("score_edit_requests")}</h1>
+      <h1 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+          <FilePenLine className="h-5 w-5 text-saed-600" aria-hidden />
+          {t("score_edit_requests")}
+        </h1>
       {error && <p className="text-sm text-state-active-fg">{error}</p>}
 
       <section className="space-y-3">

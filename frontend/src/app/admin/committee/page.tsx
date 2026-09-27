@@ -1,5 +1,7 @@
 "use client";
 
+import { UserCog } from "@/components/ui/icons";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
@@ -367,7 +369,7 @@ export default function AdminPermissionsPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-ink-900">{t("users_permissions")}</h2>
+      <PageHeader icon={UserCog} title={t("users_permissions")} />
 
       <div className="flex gap-1">
         {ROLES.map((r) => (

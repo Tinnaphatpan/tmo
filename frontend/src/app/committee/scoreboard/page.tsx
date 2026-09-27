@@ -1,5 +1,6 @@
 "use client";
 
+import { Trophy } from "@/components/ui/icons";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
@@ -36,7 +37,10 @@ export default function ScoreboardPage() {
   return (
     <div className="px-4 py-6">
       <header className="mx-auto mb-4 max-w-4xl">
-        <h1 className="text-lg font-bold text-ink-900">{t("scoreboard")}</h1>
+        <h1 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+          <Trophy className="h-5 w-5 text-saed-600" aria-hidden />
+          {t("scoreboard")}
+        </h1>
         <p className="text-sm text-ink-500">{t("total_score_per_centre_by_problem_read_only")}</p>
       </header>
       <div className="mx-auto max-w-4xl overflow-x-auto rounded-[var(--radius-card)] bg-white p-3 shadow-[var(--shadow-card)]">

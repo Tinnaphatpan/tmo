@@ -1,5 +1,6 @@
 "use client";
 
+import { ClipboardList } from "@/components/ui/icons";
 import { useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
@@ -32,7 +33,10 @@ export default function AdminScoresPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-ink-900">{t("all_scores")}</h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+          <ClipboardList className="h-5 w-5 text-saed-600" aria-hidden />
+          {t("all_scores")}
+        </h2>
         {/* File download, not a page — next/link's client-side nav doesn't apply. */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href="/api/bff/admin/scores/export">

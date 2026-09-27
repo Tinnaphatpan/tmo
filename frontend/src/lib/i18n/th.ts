@@ -248,4 +248,7 @@ export const TH: Record<string, string> = {
   your_request: "คำขอของคุณ",
   edit_requested: "ขอแก้ไขแล้ว — รอพิจารณา",
   edit_requests_pending_banner: "มีคำขอแก้ไขคะแนนรอดำเนินการ {count} รายการ",
+  overall_progress: "ความคืบหน้าการตรวจรวม",
+  of_total_queues: "จากทั้งหมด {total} คิว",
+  no_pending_items: "ไม่มีรายการค้าง",
 };

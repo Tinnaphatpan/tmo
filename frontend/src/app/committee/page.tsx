@@ -1,5 +1,6 @@
 "use client";
 
+import { ClipboardCheck } from "@/components/ui/icons";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
@@ -90,7 +91,10 @@ export default function CommitteePage() {
     <div className="px-4 py-6">
       <header className="mx-auto mb-6 max-w-4xl">
         <div>
-          <h1 className="text-lg font-bold text-ink-900">{t("committee_panel")}</h1>
+          <h1 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+          <ClipboardCheck className="h-5 w-5 text-saed-600" aria-hidden />
+          {t("committee_panel")}
+        </h1>
           {data.scoringLocked && (
             <p className="text-sm text-state-active-fg">
               {t("scoring_is_closed_use_a_score_edit_request_i")}

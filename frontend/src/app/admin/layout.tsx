@@ -1,14 +1,14 @@
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppSidebar, type NavItem } from "@/components/layout/AppSidebar";
 import { requireRole } from "@/lib/session";
 
-const NAV = [
-  { href: "/admin", label: "overview" },
-  { href: "/admin/schools", label: "schools" },
-  { href: "/admin/committee", label: "users_permissions" },
-  { href: "/admin/students", label: "students" },
-  { href: "/admin/queue", label: "queue" },
-  { href: "/admin/scores", label: "score" },
-  { href: "/admin/audit-log", label: "history" },
+const NAV: NavItem[] = [
+  { href: "/admin", label: "overview", icon: "overview" },
+  { href: "/admin/schools", label: "schools", icon: "schools" },
+  { href: "/admin/committee", label: "users_permissions", icon: "users" },
+  { href: "/admin/students", label: "students", icon: "students" },
+  { href: "/admin/queue", label: "queue", icon: "queue" },
+  { href: "/admin/scores", label: "score", icon: "scores" },
+  { href: "/admin/audit-log", label: "history", icon: "history" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

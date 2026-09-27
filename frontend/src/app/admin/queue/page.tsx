@@ -1,5 +1,7 @@
 "use client";
 
+import { ListOrdered } from "@/components/ui/icons";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
@@ -155,7 +157,7 @@ export default function AdminQueuePage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-ink-900">{t("manage_queue")}</h2>
+      <PageHeader icon={ListOrdered} title={t("manage_queue")} />
       {error && <p className="text-sm text-state-active-fg">{error}</p>}
 
       <div className="card-soft space-y-3 p-4">

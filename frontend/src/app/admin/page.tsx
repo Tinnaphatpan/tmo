@@ -4,6 +4,21 @@ import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import {
+  Activity,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock,
+  FilePenLine,
+  GraduationCap,
+  LayoutDashboard,
+  Lock,
+  LockOpen,
+  School,
+  ShieldCheck,
+  type LucideIcon,
+} from "@/components/ui/icons";
 import type { StatusCounts } from "@/lib/types";
 import { useQueueStream } from "@/lib/use-queue-stream";
 import { usePublicQueue } from "@/lib/use-public-queue";
@@ -33,32 +48,49 @@ interface DashboardResult {
   scoringLocked: boolean;
 }
 
-const TONES = {
-  red: "from-red-500 to-red-700",
-  amber: "from-yellow-300 to-yellow-500",
-  crimson: "from-blue-400 to-blue-600",
-  green: "from-green-400 to-green-600",
-  slate: "from-slate-300 to-slate-400",
+const STATUS_TONES = {
+  waiting: "bg-state-queued-bg text-state-queued-fg",
+  progress: "bg-state-progress-bg text-state-progress-fg",
+  done: "bg-state-done-bg text-state-done-fg",
 } as const;
 
-function StatCard({
+/** Large status card: coloured icon tile, big number, "of total" line. */
+function StatusCard({
+  icon: Icon,
   label,
   value,
-  tone = "slate",
+  tone,
+  caption,
 }: {
+  icon: LucideIcon;
   label: string;
-  value: number | string;
-  tone?: keyof typeof TONES;
+  value: number;
+  tone: keyof typeof STATUS_TONES;
+  caption: string;
 }) {
   return (
-    <div className="card-soft relative overflow-hidden p-4 pl-5">
-      <span
-        className={`absolute inset-y-3 left-0 w-1 rounded-r-full bg-gradient-to-b ${TONES[tone]}`}
-      />
-      <p className="text-sm text-ink-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-ink-900">
-        {value}
-      </p>
+    <div className="card-soft flex items-center gap-4 p-5">
+      <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${STATUS_TONES[tone]}`}>
+        <Icon className="h-7 w-7" strokeWidth={2} aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-ink-500">{label}</p>
+        <p className="text-4xl font-bold leading-tight tabular-nums text-ink-900">{value}</p>
+        <p className="text-xs text-ink-300">{caption}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Small neutral summary tile. */
+function MiniStat({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number | string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
+      <Icon className="h-5 w-5 shrink-0 text-ink-500" strokeWidth={2} aria-hidden />
+      <div>
+        <p className="text-xs text-ink-500">{label}</p>
+        <p className="text-xl font-bold tabular-nums text-ink-900">{value}</p>
+      </div>
     </div>
   );
 }
@@ -120,48 +152,119 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-ink-900">{t("system_overview")}</h2>
-        <Button
-          variant={data.scoringLocked ? "secondary" : "danger"}
-          disabled={toggling}
-          onClick={handleToggleLock}
-        >
-          {data.scoringLocked ? t("unlock_scoring") : t("close_scoring_system_wide")}
-        </Button>
-      </div>
+      <PageHeader
+        icon={LayoutDashboard}
+        title={t("system_overview")}
+        actions={
+          <Button
+            variant={data.scoringLocked ? "secondary" : "danger"}
+            disabled={toggling}
+            onClick={handleToggleLock}
+          >
+            {data.scoringLocked ? (
+              <LockOpen className="h-4 w-4" aria-hidden />
+            ) : (
+              <Lock className="h-4 w-4" aria-hidden />
+            )}
+            {data.scoringLocked ? t("unlock_scoring") : t("close_scoring_system_wide")}
+          </Button>
+        }
+      />
 
       {data.pendingEditRequestCount > 0 && (
         <p role="alert" className="flex items-center gap-2 rounded-xl bg-[#c8102e] px-4 py-3 text-sm font-semibold text-white shadow-md">
-          <span aria-hidden>⚠</span>
+          <FilePenLine className="h-4 w-4 shrink-0" aria-hidden />
           {t("edit_requests_pending_banner", { count: data.pendingEditRequestCount })}
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard
-          tone="amber"
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatusCard
+          icon={Clock}
+          tone="waiting"
           label={t("waiting")}
           value={data.queueCounts.waiting}
+          caption={t("of_total_queues", { total: data.queueCounts.total })}
         />
-        <StatCard
-          tone="crimson"
+        <StatusCard
+          icon={Activity}
+          tone="progress"
           label={t("in_progress")}
           value={data.queueCounts.inProgress}
+          caption={t("of_total_queues", { total: data.queueCounts.total })}
         />
-        <StatCard tone="green" label={t("done")} value={data.queueCounts.done} />
-        <StatCard label={t("schools")} value={data.schoolCount} />
-        <StatCard label={t("committee")} value={data.committeeCount} />
-        <StatCard label={t("students")} value={data.studentCount} />
-        <StatCard label={t("fully_scored")} value={data.schoolsFullyScored} />
-        <StatCard
-          tone={data.pendingEditRequestCount > 0 ? "red" : "slate"}
-          label={t("pending_edit_requests")}
-          value={data.pendingEditRequestCount}
+        <StatusCard
+          icon={CheckCircle2}
+          tone="done"
+          label={t("done")}
+          value={data.queueCounts.done}
+          caption={t("of_total_queues", { total: data.queueCounts.total })}
         />
       </div>
 
-      <section className="space-y-3">
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="card-soft p-5 lg:col-span-2">
+          <div className="mb-3 flex items-baseline justify-between">
+            <p className="text-sm font-semibold text-ink-900">{t("overall_progress")}</p>
+            <p className="text-2xl font-bold tabular-nums text-ink-900">
+              {data.queueCounts.total > 0
+                ? Math.round((data.queueCounts.done / data.queueCounts.total) * 100)
+                : 0}
+              %
+            </p>
+          </div>
+          <div className="flex h-3 overflow-hidden rounded-full bg-surface-sunken">
+            {data.queueCounts.total > 0 && (
+              <>
+                <span
+                  className="bg-state-done-fg transition-[width] duration-500"
+                  style={{ width: `${(data.queueCounts.done / data.queueCounts.total) * 100}%` }}
+                />
+                <span
+                  className="bg-state-progress-fg transition-[width] duration-500"
+                  style={{ width: `${(data.queueCounts.inProgress / data.queueCounts.total) * 100}%` }}
+                />
+              </>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-ink-500">
+            {data.queueCounts.done}/{data.queueCounts.total} · {t("of_total_queues", { total: data.queueCounts.total })}
+          </p>
+        </div>
+
+        {data.pendingEditRequestCount > 0 ? (
+          <div className="flex items-center gap-4 rounded-[var(--radius-card)] border-2 border-[#c8102e] bg-red-50 p-5">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#c8102e] text-white">
+              <FilePenLine className="h-7 w-7" aria-hidden />
+            </span>
+            <div>
+              <p className="text-sm font-medium text-[#c8102e]">{t("pending_edit_requests")}</p>
+              <p className="text-4xl font-bold leading-tight tabular-nums text-[#c8102e]">
+                {data.pendingEditRequestCount}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-4 rounded-[var(--radius-card)] border border-dashed border-line bg-surface p-5">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-sunken text-ink-300">
+              <FilePenLine className="h-7 w-7" aria-hidden />
+            </span>
+            <div>
+              <p className="text-sm font-medium text-ink-500">{t("pending_edit_requests")}</p>
+              <p className="text-sm text-ink-300">{t("no_pending_items")}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <MiniStat icon={School} label={t("schools")} value={data.schoolCount} />
+        <MiniStat icon={ShieldCheck} label={t("committee")} value={data.committeeCount} />
+        <MiniStat icon={GraduationCap} label={t("students")} value={data.studentCount} />
+        <MiniStat icon={ClipboardCheck} label={t("fully_scored")} value={data.schoolsFullyScored} />
+      </div>
+
+      <section className="space-y-3 border-t border-line pt-6">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-ink-900">{t("status_per_problem")}</h3>
           <span className="inline-flex items-center gap-1.5 text-xs text-ink-500">

@@ -1,12 +1,12 @@
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppSidebar, type NavItem } from "@/components/layout/AppSidebar";
 import { Watermark } from "@/components/Watermark";
 import { EditRequestAlertBar } from "@/components/EditRequestAlertBar";
 import { requireRole } from "@/lib/session";
 
-const NAV = [
-  { href: "/staff", label: "manage_queue" },
-  { href: "/staff/scoreboard", label: "scoreboard" },
-  { href: "/staff/score-edit-requests", label: "score_edit_requests" },
+const NAV: NavItem[] = [
+  { href: "/staff", label: "manage_queue", icon: "queue" },
+  { href: "/staff/scoreboard", label: "scoreboard", icon: "scoreboard" },
+  { href: "/staff/score-edit-requests", label: "score_edit_requests", icon: "edit" },
 ];
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {

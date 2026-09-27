@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePenLine } from "@/components/ui/icons";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { useT } from "@/lib/i18n";
@@ -65,7 +66,10 @@ export default function TeamLeaderScoreEditRequestsPage() {
 
   return (
     <div className="space-y-6 p-4">
-      <h2 className="text-lg font-bold text-ink-900">{t("score_edit_requests")}</h2>
+      <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+          <FilePenLine className="h-5 w-5 text-saed-600" aria-hidden />
+          {t("score_edit_requests")}
+        </h2>
       {error && <p className="text-sm text-state-active-fg">{error}</p>}
 
       <div className="space-y-6">

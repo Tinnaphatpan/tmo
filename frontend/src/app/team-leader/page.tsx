@@ -1,5 +1,6 @@
 "use client";
 
+import { ClipboardList } from "@/components/ui/icons";
 import { useT } from "@/lib/i18n";
 import { useState } from "react";
 import { PageSkeleton } from "@/components/ui/Skeleton";
@@ -21,7 +22,10 @@ export default function TeamLeaderPage() {
     <div className="p-4">
       <header className="mx-auto mb-4 max-w-3xl">
         <div>
-          <h1 className="text-lg font-bold text-ink-900">{t("student_scores")}</h1>
+          <h1 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+          <ClipboardList className="h-5 w-5 text-saed-600" aria-hidden />
+          {t("student_scores")}
+        </h1>
           {report && <p className="text-sm text-ink-500">{report.schoolName}</p>}
         </div>
       </header>

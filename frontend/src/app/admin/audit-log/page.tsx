@@ -1,5 +1,7 @@
 "use client";
 
+import { History } from "@/components/ui/icons";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
@@ -57,7 +59,7 @@ export default function AdminAuditLogPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-ink-900">{t("edit_history")}</h2>
+      <PageHeader icon={History} title={t("edit_history")} />
 
       <div className="flex flex-wrap items-center gap-3">
         <select

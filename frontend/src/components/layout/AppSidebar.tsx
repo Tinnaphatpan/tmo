@@ -6,10 +6,12 @@ import { usePathname } from "next/navigation";
 import { useT } from "@/lib/i18n";
 import { LocaleSwitcher } from "@/lib/i18n";
 import { LogoutButton } from "@/components/LogoutButton";
+import { NAV_ICONS, type NavIconName } from "@/components/ui/icons";
 
 export interface NavItem {
   href: string;
   label: string;
+  icon?: NavIconName;
 }
 
 interface AppSidebarProps {
@@ -41,18 +43,20 @@ export function AppSidebar({ title, nav, children }: AppSidebarProps) {
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-3 py-2">
       {nav.map((item) => {
         const active = item.href === activeHref;
+        const Icon = item.icon ? NAV_ICONS[item.icon] : null;
         return (
           <Link
             key={item.href}
             href={item.href}
             onClick={() => setOpen(false)}
             aria-current={active ? "page" : undefined}
-            className={`touch-target rounded-xl px-3 py-2.5 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ease-out ${
+            className={`touch-target flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ease-out ${
               active
                 ? "nav-active text-white"
                 : "text-ink-300 hover:bg-white/10 hover:text-white"
             }`}
           >
+            {Icon && <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} aria-hidden />}
             {t(item.label)}
           </Link>
         );

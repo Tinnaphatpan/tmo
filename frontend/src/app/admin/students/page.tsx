@@ -1,5 +1,7 @@
 "use client";
 
+import { GraduationCap } from "@/components/ui/icons";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
@@ -99,7 +101,7 @@ export default function AdminStudentsPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-ink-900">{t("manage_students")}</h2>
+      <PageHeader icon={GraduationCap} title={t("manage_students")} />
 
       <div className="card-soft space-y-3 p-4">
         <h3 className="font-semibold text-ink-900">{t("import_roster_csv_xlsx")}</h3>

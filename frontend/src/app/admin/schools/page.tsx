@@ -1,5 +1,7 @@
 "use client";
 
+import { School } from "@/components/ui/icons";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
@@ -66,7 +68,7 @@ export default function AdminSchoolsPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-ink-900">{t("manage_schools")}</h2>
+      <PageHeader icon={School} title={t("manage_schools")} />
 
       <div className="card-soft p-4">
         <h3 className="mb-3 font-semibold text-ink-900">

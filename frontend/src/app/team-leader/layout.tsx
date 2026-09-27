@@ -1,12 +1,12 @@
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppSidebar, type NavItem } from "@/components/layout/AppSidebar";
 import { Watermark } from "@/components/Watermark";
 import { requireRole } from "@/lib/session";
 import { MentorShell } from "@/app/team-leader/_components/MentorShell";
 
-const NAV = [
-  { href: "/team-leader", label: "student_scores" },
-  { href: "/team-leader/approvals", label: "approve_scores" },
-  { href: "/team-leader/score-edit-requests", label: "score_edit_requests" },
+const NAV: NavItem[] = [
+  { href: "/team-leader", label: "student_scores", icon: "scores" },
+  { href: "/team-leader/approvals", label: "approve_scores", icon: "approve" },
+  { href: "/team-leader/score-edit-requests", label: "score_edit_requests", icon: "edit" },
 ];
 
 export default async function TeamLeaderLayout({ children }: { children: React.ReactNode }) {

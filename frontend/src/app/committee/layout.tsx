@@ -1,12 +1,12 @@
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppSidebar, type NavItem } from "@/components/layout/AppSidebar";
 import { Watermark } from "@/components/Watermark";
 import { EditRequestAlertBar } from "@/components/EditRequestAlertBar";
 import { requireRole } from "@/lib/session";
 
-const NAV = [
-  { href: "/committee", label: "grading" },
-  { href: "/committee/scoreboard", label: "scoreboard" },
-  { href: "/committee/score-edit-requests", label: "score_edit_requests" },
+const NAV: NavItem[] = [
+  { href: "/committee", label: "grading", icon: "review" },
+  { href: "/committee/scoreboard", label: "scoreboard", icon: "scoreboard" },
+  { href: "/committee/score-edit-requests", label: "score_edit_requests", icon: "edit" },
 ];
 
 export default async function CommitteeLayout({ children }: { children: React.ReactNode }) {

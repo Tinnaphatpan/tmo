@@ -1,5 +1,6 @@
 "use client";
 
+import { Printer } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useTeamLeaderReport } from "@/lib/use-team-leader-report";
 import { MentorScoreTable } from "@/app/team-leader/_components/MentorScoreTable";
@@ -13,7 +14,10 @@ export default function TeamLeaderPrintPage() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="no-print mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-ink-900">{t("print_score_report")}</h1>
+        <h1 className="flex items-center gap-2 text-lg font-bold text-ink-900">
+          <Printer className="h-5 w-5 text-saed-600" aria-hidden />
+          {t("print_score_report")}
+        </h1>
         <PrintButton />
       </div>
 

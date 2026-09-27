@@ -248,4 +248,7 @@ export const EN: Record<string, string> = {
   your_request: "Your request",
   edit_requested: "Edit requested — pending",
   edit_requests_pending_banner: "{count} score edit request(s) pending",
+  overall_progress: "Overall grading progress",
+  of_total_queues: "of {total} queues",
+  no_pending_items: "Nothing pending",
 };

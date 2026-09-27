@@ -20,7 +20,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale: Locale = (await cookies()).get(LOCALE_COOKIE)?.value === "en" ? "en" : "th";
   return (
     <html lang={locale} className={`${notoSansThai.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <I18nProvider initialLocale={locale}>{children}</I18nProvider>
       </body>
     </html>

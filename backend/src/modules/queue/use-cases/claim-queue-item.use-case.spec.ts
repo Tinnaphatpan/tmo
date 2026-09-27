@@ -112,4 +112,27 @@ describe('ClaimQueueItemUseCase', () => {
     expect(item?.status).toBe('IN_PROGRESS');
     expect(['judge-a', 'judge-b']).toContain(item?.claimedByUserId);
   });
+
+  it('rejects with 409 while the judge’s previous score set still awaits team-leader approval', async () => {
+    queueRepo.seed(makeQueueItem({ id: 'q1', problemNumber: 1 }));
+    queueRepo.seed(
+      makeQueueItem({
+        id: 'q-prev',
+        problemNumber: 1,
+        schoolId: 'school-2',
+        status: 'DONE',
+        submittedByUserId: 'judge-1',
+        approvalStatus: 'PENDING',
+      }),
+    );
+    assignmentRepo.seed('judge-1', [1]);
+
+    await expect(useCase.execute('judge-1', 'q1')).rejects.toBeInstanceOf(ConflictException);
+    expect((await queueRepo.findById('q1'))?.status).toBe('WAITING');
+
+    // Approved → free to claim.
+    (await queueRepo.findById('q-prev'))!.approvalStatus = 'APPROVED';
+    await useCase.execute('judge-1', 'q1');
+    expect((await queueRepo.findById('q1'))?.status).toBe('IN_PROGRESS');
+  });
 });

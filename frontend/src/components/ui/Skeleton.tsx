@@ -1,3 +1,4 @@
+import { useT } from "@/lib/i18n";
 /** Shimmering placeholder block; size it with `className` (h-*, w-*). */
 export function Skeleton({ className = "" }: { className?: string }) {
   return <div aria-hidden className={`skeleton ${className}`} />;
@@ -9,9 +10,10 @@ export function Skeleton({ className = "" }: { className?: string }) {
  * in the DOM for screen readers (and tests) via `sr-only`.
  */
 export function PageSkeleton({ rows = 5 }: { rows?: number }) {
+  const t = useT();
   return (
     <div role="status" className="space-y-3 p-4">
-      <span className="sr-only">กำลังโหลด...</span>
+      <span className="sr-only">{t("loading")}</span>
       <Skeleton className="h-7 w-40" />
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-14 w-full" />

@@ -55,6 +55,7 @@ const queue = (items: MyQueueItem[], currentItemId: string | null = null, extra 
   items,
   currentItemId,
   scoringLocked: false,
+  awaitingApproval: false,
   updatedAt: "now",
   ...extra,
 });
@@ -158,6 +159,25 @@ describe("TeamLeaderApprovalsPage (F2)", () => {
     expect(within(li).getByText("ข้อ 2")).toBeInTheDocument();
     expect((await screen.findAllByText("ศูนย์ A")).length).toBeGreaterThan(0); // header subtitle
     expect(within(li).getByText("รออนุมัติ")).toBeInTheDocument(); // the badge, not the section title
+  });
+
+  it("shows each student's score with a per-student edit-request button BEFORE approving", async () => {
+    route([
+      {
+        id: "p1",
+        problemNumber: 2,
+        schoolName: "ศูนย์ A",
+        scores: [
+          { scoreId: "sc1", studentCode: "S001", studentName: "สมชาย", value: 7.5 },
+          { scoreId: "sc2", studentCode: "S002", studentName: "สมหญิง", value: 9 },
+        ],
+      },
+    ]);
+    render(<TeamLeaderApprovalsPage />);
+    expect(await screen.findByText("สมชาย")).toBeInTheDocument();
+    expect(screen.getByText("7.50")).toBeInTheDocument();
+    expect(screen.getByText("9.00")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "ขอแก้ไขคะแนน" })).toHaveLength(2);
   });
 
   it("approve posts, moves the item to the session's approved list with a PDF link, and reloads", async () => {

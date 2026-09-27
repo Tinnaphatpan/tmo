@@ -1,11 +1,11 @@
 import { useT } from "@/lib/i18n";
 
 const LABELS: Record<string, string> = {
-  WAITING: "รอตรวจ",
-  IN_PROGRESS: "กำลังตรวจ",
-  DONE: "ตรวจแล้ว",
-  PENDING_APPROVAL: "รออนุมัติ",
-  APPROVED: "อนุมัติแล้ว",
+  WAITING: "waiting",
+  IN_PROGRESS: "in_progress",
+  DONE: "done",
+  PENDING_APPROVAL: "pending_approval",
+  APPROVED: "approved",
 };
 
 const CLASSES: Record<string, string> = {

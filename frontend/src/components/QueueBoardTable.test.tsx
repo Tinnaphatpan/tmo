@@ -124,7 +124,7 @@ describe("/queue page", () => {
     usePublicQueue.mockReturnValue(data());
     const { default: Page } = await import("@/app/(public)/queue/page");
     render(<Page />);
-    expect(screen.getByText("TMO Queue Board")).toBeInTheDocument();
+    expect(screen.getByText("TMO Dashboard")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "ตารางคิวรวม" })).toBeInTheDocument();
     expect(screen.getByText("KKU")).toBeInTheDocument();
     expect(screen.getByText(/รอตรวจ 3 · กำลังตรวจ 1 · ตรวจแล้ว 1 จากทั้งหมด 5/)).toBeInTheDocument();

@@ -10,10 +10,12 @@ import { SchoolLogo } from "@/components/SchoolLogo";
 import { Button } from "@/components/ui/Button";
 import { ScoreForm } from "@/components/ScoreForm";
 
+import { useT } from "@/lib/i18n";
 /** Staff queue management: Call Next / Skip / Mark Complete (ScoreForm) within
  * the caller's UserAssignment scope — scoping itself is enforced server-side,
  * `/queue/mine` already returns only in-scope items. */
 export default function StaffPage() {
+  const t = useT();
   const [data, setData] = useState<MyQueueResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export default function StaffPage() {
       setData(data);
       setError(null);
     } catch (err) {
-      setError(getApiErrorMessage(err, "โหลดข้อมูลไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_load_data")));
     }
   }, []);
 
@@ -62,13 +64,18 @@ export default function StaffPage() {
   return (
     <div className="px-4 py-6">
       <header className="mx-auto mb-6 max-w-4xl">
-        <h1 className="text-lg font-bold text-ink-900">จัดการคิว</h1>
+        <h1 className="text-lg font-bold text-ink-900">{t("manage_queue")}</h1>
         {data.scoringLocked && (
-          <p className="text-sm text-state-active-fg">ปิดรับคะแนนแล้ว</p>
+          <p className="text-sm text-state-active-fg">{t("scoring_is_closed")}</p>
         )}
       </header>
 
       <div className="mx-auto max-w-4xl space-y-6">
+        {data.awaitingApproval && (
+          <p className="rounded-lg bg-state-pending-approval-bg px-4 py-3 text-sm font-medium text-state-pending-approval-fg">
+            ⏳ {t("waiting_for_the_team_leader_to_approve_your")}
+          </p>
+        )}
         {actionError && (
           <p className="rounded-lg bg-state-active-bg px-4 py-2 text-sm text-state-active-fg">
             {actionError}
@@ -76,7 +83,7 @@ export default function StaffPage() {
         )}
 
         <section className="card-soft p-5">
-          <h2 className="mb-3 font-semibold text-ink-900">กำลังตรวจอยู่</h2>
+          <h2 className="mb-3 font-semibold text-ink-900">{t("currently_grading")}</h2>
           {current ? (
             <div className="animate-fade-in">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -86,7 +93,7 @@ export default function StaffPage() {
                     {current.school.name}
                   </p>
                   <p className="text-sm text-ink-500">
-                    ข้อ {current.problemNumber}
+                    {t("problem_n", { n: current.problemNumber })}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -94,19 +101,19 @@ export default function StaffPage() {
                     variant="secondary"
                     disabled={busy}
                     onClick={() =>
-                      act(`/queue/${current.id}/skip`, "ข้ามคิวไม่สำเร็จ")
+                      act(`/queue/${current.id}/skip`, t("failed_to_skip"))
                     }
                   >
-                    ข้ามคิว
+                    {t("skip")}
                   </Button>
                   <Button
                     variant="ghost"
                     disabled={busy}
                     onClick={() =>
-                      act(`/queue/${current.id}/release`, "คืนคิวไม่สำเร็จ")
+                      act(`/queue/${current.id}/release`, t("failed_to_release"))
                     }
                   >
-                    คืนคิว
+                    {t("release")}
                   </Button>
                 </div>
               </div>
@@ -116,17 +123,17 @@ export default function StaffPage() {
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-ink-500">
                 {next
-                  ? `ถัดไป: ${next.school.name} · ข้อ ${next.problemNumber}`
-                  : "ไม่มีรายการรอตรวจ"}
+                  ? t("next_school_problem_n_2", { school: next.school.name, n: next.problemNumber })
+                  : t("nothing_waiting")}
               </p>
               <Button
-                disabled={busy || !next}
+                disabled={busy || !next || data.awaitingApproval}
                 onClick={() =>
                   next &&
-                  act(`/queue/${next.id}/claim`, "เรียกคิวถัดไปไม่สำเร็จ")
+                  act(`/queue/${next.id}/claim`, t("failed_to_call_the_next_item"))
                 }
               >
-                เรียกคิวถัดไป
+                {t("call_next")}
               </Button>
             </div>
           )}
@@ -134,10 +141,10 @@ export default function StaffPage() {
 
         <section className="card-soft p-5">
           <h2 className="mb-3 font-semibold text-ink-900">
-            รอตรวจ ({waiting.length})
+            {t("waiting_count", { count: waiting.length })}
           </h2>
           {waiting.length === 0 ? (
-            <p className="text-sm text-ink-500">ไม่มีรายการรอตรวจ</p>
+            <p className="text-sm text-ink-500">{t("nothing_waiting")}</p>
           ) : (
             <ul className="divide-y divide-line">
               {waiting.map((item) => (
@@ -151,7 +158,7 @@ export default function StaffPage() {
                       {item.school.name}
                     </p>
                     <p className="text-sm text-ink-500">
-                      ข้อ {item.problemNumber}
+                      {t("problem_n", { n: item.problemNumber })}
                     </p>
                   </div>
                   <StatusBadge status={item.status} />

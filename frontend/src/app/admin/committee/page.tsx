@@ -5,6 +5,7 @@ import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
 import type { SchoolRef } from "@/lib/types";
 
+import { useT } from "@/lib/i18n";
 type Role = "COMMITTEE" | "STAFF" | "TEAM_LEADER";
 
 interface Assignment {
@@ -23,17 +24,18 @@ interface MatrixRow {
   assignments: Assignment[];
 }
 
-/** Scope being edited: COMMITTEE/STAFF use `assignments`, TEAM_LEADER uses `schoolId`. */
 interface Scope {
   assignments: Assignment[];
   schoolId: string;
 }
 const EMPTY_SCOPE: Scope = { assignments: [], schoolId: "" };
 
+type T = ReturnType<typeof useT>;
+
 const ROLE_LABELS: Record<Role, string> = {
-  COMMITTEE: "กรรมการ",
-  STAFF: "เจ้าหน้าที่",
-  TEAM_LEADER: "หัวหน้าทีม",
+  COMMITTEE: "committee",
+  STAFF: "staff",
+  TEAM_LEADER: "team_leader",
 };
 const ROLES = Object.keys(ROLE_LABELS) as Role[];
 const PROBLEMS = [1, 2, 3, 4, 5];
@@ -71,7 +73,6 @@ function ProblemPicker({
   );
 }
 
-/** STAFF scope: any number of (problem, school-or-all) rows. */
 function ProblemSchoolMatrix({
   value,
   schools,
@@ -81,6 +82,7 @@ function ProblemSchoolMatrix({
   schools: SchoolRef[];
   onChange: (next: Assignment[]) => void;
 }) {
+  const t = useT();
   const update = (i: number, patch: Partial<Assignment>) =>
     onChange(value.map((a, idx) => (idx === i ? { ...a, ...patch } : a)));
   return (
@@ -88,24 +90,24 @@ function ProblemSchoolMatrix({
       {value.map((a, i) => (
         <div key={i} className="flex flex-wrap items-center gap-2">
           <select
-            aria-label="ข้อ"
+            aria-label={t("problem")}
             value={a.problemNumber}
             onChange={(e) => update(i, { problemNumber: Number(e.target.value) })}
             className={inputCls}
           >
             {PROBLEMS.map((p) => (
               <option key={p} value={p}>
-                ข้อ {p}
+                {t("problem_n", { n: p })}
               </option>
             ))}
           </select>
           <select
-            aria-label="ศูนย์"
+            aria-label={t("centre")}
             value={a.schoolId ?? ""}
             onChange={(e) => update(i, { schoolId: e.target.value || null })}
             className={inputCls}
           >
-            <option value="">ทุกศูนย์</option>
+            <option value="">{t("all_centres")}</option>
             {schools.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -113,7 +115,7 @@ function ProblemSchoolMatrix({
             ))}
           </select>
           <Button variant="ghost" onClick={() => onChange(value.filter((_, idx) => idx !== i))}>
-            ลบ
+            {t("delete")}
           </Button>
         </div>
       ))}
@@ -121,7 +123,7 @@ function ProblemSchoolMatrix({
         variant="secondary"
         onClick={() => onChange([...value, { problemNumber: 1, schoolId: null }])}
       >
-        + เพิ่มข้อ/ศูนย์
+        {t("add_problem_centre")}
       </Button>
     </div>
   );
@@ -136,14 +138,15 @@ function SchoolSelect({
   schools: SchoolRef[];
   onChange: (next: string) => void;
 }) {
+  const t = useT();
   return (
     <select
-      aria-label="ศูนย์สอบ"
+      aria-label={t("centre_2")}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={inputCls}
     >
-      <option value="">เลือกศูนย์สอบ...</option>
+      <option value="">{t("choose_a_centre")}</option>
       {schools.map((s) => (
         <option key={s.id} value={s.id}>
           {s.name}
@@ -212,20 +215,21 @@ function scopeOf(row: MatrixRow): Scope {
   return { assignments: row.assignments, schoolId: row.schoolId ?? "" };
 }
 
-function describeScope(row: MatrixRow, schools: SchoolRef[]): string {
+function describeScope(row: MatrixRow, schools: SchoolRef[], t: T): string {
   if (row.role === "TEAM_LEADER") {
-    return `ศูนย์: ${schools.find((s) => s.id === row.schoolId)?.name ?? "-"}`;
+    return t("centre_name", { name: schools.find((s) => s.id === row.schoolId)?.name ?? "-" });
   }
-  if (row.assignments.length === 0) return "ยังไม่ได้มอบหมาย";
+  if (row.assignments.length === 0) return t("not_assigned_yet");
   return row.assignments
     .map((a) => {
       const school = a.schoolId ? schools.find((s) => s.id === a.schoolId)?.name : null;
-      return `ข้อ ${a.problemNumber}${school ? ` (${school})` : ""}`;
+      return `${t("problem_n", { n: a.problemNumber })}${school ? ` (${school})` : ""}`;
     })
     .join(", ");
 }
 
 export default function AdminPermissionsPage() {
+  const t = useT();
   const [rows, setRows] = useState<MatrixRow[]>([]);
   const [schools, setSchools] = useState<SchoolRef[]>([]);
   const [tab, setTab] = useState<Role>("COMMITTEE");
@@ -254,7 +258,7 @@ export default function AdminPermissionsPage() {
       setRows(matrix.data);
       setSchools(schoolList.data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "โหลดข้อมูลไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_load_data")));
     }
   }, []);
 
@@ -286,7 +290,7 @@ export default function AdminPermissionsPage() {
       setNewScope(EMPTY_SCOPE);
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err, "สร้างบัญชีไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_create_the_account")));
     } finally {
       setCreating(false);
     }
@@ -303,18 +307,18 @@ export default function AdminPermissionsPage() {
       setEditingId(null);
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err, "บันทึกไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_save")));
     }
   }
 
   async function handleDelete(row: MatrixRow) {
-    if (!window.confirm("ยืนยันการลบบัญชีนี้?")) return;
+    if (!window.confirm(t("delete_this_account"))) return;
     setError(null);
     try {
       await api.delete(endpoint(row.role), { params: { id: row.id } });
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err, "ลบไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_delete")));
     }
   }
 
@@ -333,7 +337,7 @@ export default function AdminPermissionsPage() {
       setTab(role); // follow the user to their new role's tab
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err, "เปลี่ยนบทบาทไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_change_the_role")));
     }
   }
 
@@ -347,7 +351,7 @@ export default function AdminPermissionsPage() {
       await api.post(`/admin/users/${row.id}/signature`, form);
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err, "อัปโหลดลายเซ็นไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_upload_the_signature")));
     } finally {
       setUploadingId(null);
     }
@@ -363,7 +367,7 @@ export default function AdminPermissionsPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-ink-900">ผู้ใช้และสิทธิ์</h2>
+      <h2 className="text-lg font-bold text-ink-900">{t("users_permissions")}</h2>
 
       <div className="flex gap-1">
         {ROLES.map((r) => (
@@ -375,7 +379,7 @@ export default function AdminPermissionsPage() {
               tab === r ? "bg-saed-100 text-saed-700" : "text-ink-500 hover:bg-surface-sunken"
             }`}
           >
-            {ROLE_LABELS[r]}
+            {t(ROLE_LABELS[r])}
           </button>
         ))}
       </div>
@@ -383,7 +387,7 @@ export default function AdminPermissionsPage() {
       {error && <p className="text-sm text-state-active-fg">{error}</p>}
 
       <div className="card-soft space-y-3 p-4">
-        <h3 className="font-semibold text-ink-900">สร้างบัญชี{ROLE_LABELS[tab]}ใหม่</h3>
+        <h3 className="font-semibold text-ink-900">{t("create_a_new_role_account", { role: t(ROLE_LABELS[tab]) })}</h3>
         <div className="grid gap-3 sm:grid-cols-3">
           <input
             placeholder="username"
@@ -392,13 +396,13 @@ export default function AdminPermissionsPage() {
             className={inputCls}
           />
           <input
-            placeholder="ชื่อที่แสดง"
+            placeholder={t("display_name")}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             className={inputCls}
           />
           <input
-            placeholder="รหัสผ่าน (≥8 ตัว)"
+            placeholder={t("password_8_characters")}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -407,17 +411,17 @@ export default function AdminPermissionsPage() {
         </div>
         <div className="space-y-2">
           <span className="text-sm text-ink-500">
-            {tab === "TEAM_LEADER" ? "ศูนย์ที่ดูแล:" : "มอบหมาย:"}
+            {tab === "TEAM_LEADER" ? t("centre_in_charge") : t("assigned")}
           </span>
           <ScopeEditor role={tab} value={newScope} schools={schools} onChange={setNewScope} />
         </div>
         <Button onClick={handleCreate} disabled={!canSubmit}>
-          สร้างบัญชี
+          {t("create_account")}
         </Button>
       </div>
 
       <div className="card-soft divide-y divide-line p-2">
-        {visible.length === 0 && <p className="p-3 text-sm text-ink-500">ไม่มีรายการ</p>}
+        {visible.length === 0 && <p className="p-3 text-sm text-ink-500">{t("nothing_here")}</p>}
         {visible.map((row) => (
           <div key={row.id} className="p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -435,10 +439,10 @@ export default function AdminPermissionsPage() {
                     }`}
                   >
                     {uploadingId === row.id
-                      ? "กำลังอัปโหลด..."
+                      ? t("uploading")
                       : row.hasSignature
-                        ? "ลายเซ็น ✓ (เปลี่ยน)"
-                        : "อัปโหลดลายเซ็น"}
+                        ? t("signature_replace")
+                        : t("upload_signature")}
                   </span>
                   <input
                     type="file"
@@ -454,10 +458,10 @@ export default function AdminPermissionsPage() {
                 {editingId === row.id ? (
                   <>
                     <Button variant="secondary" onClick={() => handleSaveEdit(row)}>
-                      บันทึก
+                      {t("save")}
                     </Button>
                     <Button variant="ghost" onClick={() => setEditingId(null)}>
-                      ยกเลิก
+                      {t("cancel")}
                     </Button>
                   </>
                 ) : (
@@ -471,7 +475,7 @@ export default function AdminPermissionsPage() {
                         setEditPassword("");
                       }}
                     >
-                      แก้ไข
+                      {t("edit")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -484,10 +488,10 @@ export default function AdminPermissionsPage() {
                         });
                       }}
                     >
-                      เปลี่ยนบทบาท
+                      {t("change_role")}
                     </Button>
                     <Button variant="danger" onClick={() => handleDelete(row)}>
-                      ลบ
+                      {t("delete")}
                     </Button>
                   </>
                 )}
@@ -503,7 +507,7 @@ export default function AdminPermissionsPage() {
                   onChange={setEditScope}
                 />
                 <input
-                  placeholder="รหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)"
+                  placeholder={t("new_password_leave_blank_to_keep")}
                   type="password"
                   value={editPassword}
                   onChange={(e) => setEditPassword(e.target.value)}
@@ -515,9 +519,9 @@ export default function AdminPermissionsPage() {
             {roleChange?.id === row.id && (
               <div className="mt-3 space-y-3 rounded-lg border border-line bg-surface-sunken p-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-ink-700">เปลี่ยนเป็น:</span>
+                  <span className="text-sm text-ink-700">{t("change_to")}</span>
                   <select
-                    aria-label="บทบาทใหม่"
+                    aria-label={t("new_role")}
                     value={roleChange.role}
                     onChange={(e) =>
                       setRoleChange({ ...roleChange, role: e.target.value as Role, scope: EMPTY_SCOPE })
@@ -526,14 +530,14 @@ export default function AdminPermissionsPage() {
                   >
                     {ROLES.filter((r) => r !== row.role).map((r) => (
                       <option key={r} value={r}>
-                        {ROLE_LABELS[r]}
+                        {t(ROLE_LABELS[r])}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div className="space-y-2">
                   <span className="text-sm text-ink-500">
-                    {roleChange.role === "TEAM_LEADER" ? "ศูนย์ที่ดูแล:" : "มอบหมาย:"}
+                    {roleChange.role === "TEAM_LEADER" ? t("centre_in_charge") : t("assigned")}
                   </span>
                   <ScopeEditor
                     role={roleChange.role}
@@ -547,20 +551,20 @@ export default function AdminPermissionsPage() {
                     onClick={handleChangeRole}
                     disabled={scopeIsEmpty(roleChange.role, roleChange.scope)}
                   >
-                    ยืนยันเปลี่ยนบทบาท
+                    {t("confirm_role_change")}
                   </Button>
                   <Button variant="ghost" onClick={() => setRoleChange(null)}>
-                    ยกเลิก
+                    {t("cancel")}
                   </Button>
                 </div>
                 <p className="text-xs text-ink-500">
-                  ผู้ใช้ต้องไม่ถือคิวค้างอยู่ และมีผลทันที (หน้าเว็บจะพาไปยังหน้าตามบทบาทใหม่เมื่อเปิดหน้าถัดไป)
+                  {t("the_user_must_not_be_holding_a_queue_item_ta")}
                 </p>
               </div>
             )}
 
             {editingId !== row.id && (
-              <p className="mt-1 text-sm text-ink-500">{describeScope(row, schools)}</p>
+              <p className="mt-1 text-sm text-ink-500">{describeScope(row, schools, t)}</p>
             )}
           </div>
         ))}

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { QueueItem } from '../../../domain/entities';
 import { QueueRepository } from '../../queue/queue.repository';
 
@@ -42,6 +42,22 @@ export class ManageQueueUseCase {
     const neighbourPosition = neighbour.position;
     await this.queueRepository.updatePosition(item.id, neighbourPosition);
     await this.queueRepository.updatePosition(neighbour.id, itemPosition);
+  }
+
+  /** Edits one item's exam time (Bangkok local, no DST); Position is unchanged. Only WAITING items. */
+  async setScheduledTime(id: string, date: string, time: string): Promise<void> {
+    const item = await this.queueRepository.findById(id);
+    if (!item) {
+      throw new NotFoundException('ไม่พบรายการคิวนี้');
+    }
+    if (item.status !== 'WAITING') {
+      throw new ConflictException('แก้เวลาได้เฉพาะรายการที่ยังรอตรวจ');
+    }
+    const scheduledAt = new Date(`${date}T${time}:00+07:00`);
+    if (Number.isNaN(scheduledAt.getTime())) {
+      throw new BadRequestException('รูปแบบวันที่หรือเวลาไม่ถูกต้อง');
+    }
+    await this.queueRepository.updateSchedule(id, item.position, scheduledAt);
   }
 
   async remove(id: string): Promise<void> {

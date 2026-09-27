@@ -92,6 +92,7 @@ const q = (items: MyQueueItem[], currentItemId: string | null = null, scoringLoc
   items,
   currentItemId,
   scoringLocked,
+  awaitingApproval: false,
   updatedAt: "now",
 });
 

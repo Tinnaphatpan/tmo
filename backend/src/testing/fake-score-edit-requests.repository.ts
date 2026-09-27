@@ -37,6 +37,8 @@ export class FakeScoreEditRequestsRepository extends ScoreEditRequestsRepository
       studentCode: 'x',
       problemNumber: 1,
       requestedByDisplayName: 'x',
+      requestedByRole: 'COMMITTEE' as const,
+      schoolId: 'x',
     }));
   }
 

@@ -19,6 +19,10 @@ export class FakeScoresRepository extends ScoresRepository {
     return this.scores.filter((s) => s.queueItemId === queueItemId);
   }
 
+  async findByQueueItems(queueItemIds: string[]): Promise<Score[]> {
+    return this.scores.filter((s) => queueItemIds.includes(s.queueItemId));
+  }
+
   async findById(id: string): Promise<Score | null> {
     return this.scores.find((s) => s.id === id) ?? null;
   }

@@ -124,6 +124,19 @@ export class MssqlQueueRepository extends QueueRepository {
     return result.recordset[0] ? toEntity(result.recordset[0]) : null;
   }
 
+  async findAwaitingApprovalBySubmitter(
+    userId: string,
+    executor?: Executor,
+  ): Promise<QueueItem | null> {
+    const result = await request(this.exec(executor))
+      .input('userId', sql.UniqueIdentifier, userId)
+      .query<QueueItemRow>(
+        `SELECT TOP 1 ${QUEUE_ITEM_COLUMNS} FROM QueueItem q
+         WHERE q.SubmittedByUserId = @userId AND q.Status = 'DONE' AND q.ApprovalStatus = 'PENDING'`,
+      );
+    return result.recordset[0] ? toEntity(result.recordset[0]) : null;
+  }
+
   async claim(id: string, userId: string, executor?: Executor): Promise<boolean> {
     const result = await request(this.exec(executor))
       .input('id', sql.UniqueIdentifier, id)

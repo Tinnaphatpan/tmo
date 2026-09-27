@@ -45,6 +45,14 @@ export class ClaimQueueItemUseCase {
       throw new ConflictException('คุณกำลังตรวจอีกรายการอยู่ กรุณาส่งคะแนนหรือคืนคิวก่อน');
     }
 
+    // Approval gate: the judge's previous score set must be signed off by the
+    // school's team leader first, so a later edit request can't collide with
+    // the queue already running on other schools.
+    const awaiting = await this.queueRepository.findAwaitingApprovalBySubmitter(userId);
+    if (awaiting) {
+      throw new ConflictException('รอหัวหน้าทีมอนุมัติคะแนนที่ส่งไปก่อน จึงจะรับคิวถัดไปได้');
+    }
+
     // The real race guard: an atomic conditional UPDATE at the DB layer
     // (WHERE Status='WAITING' AND ClaimedByUserId IS NULL). Everything above
     // is just producing a friendlier error for the common case — this call

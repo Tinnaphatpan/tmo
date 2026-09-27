@@ -54,7 +54,7 @@ export function ScoreForm({ item, onSubmitted }: ScoreFormProps) {
       sessionStorage.setItem(draftKey(item.id), JSON.stringify(values));
       setDraftSaved(true);
     } catch {
-      setError(t("บันทึกฉบับร่างไม่สำเร็จ"));
+      setError(t("failed_to_save_draft"));
     }
   }
 
@@ -70,7 +70,7 @@ export function ScoreForm({ item, onSubmitted }: ScoreFormProps) {
       } catch {}
       onSubmitted();
     } catch (err) {
-      setError(getApiErrorMessage(err, t("บันทึกคะแนนไม่สำเร็จ")));
+      setError(getApiErrorMessage(err, t("failed_to_save_scores")));
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +80,7 @@ export function ScoreForm({ item, onSubmitted }: ScoreFormProps) {
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         {students.map((student) => (
-          <label key={student.id} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface-sunken px-3 py-2">
+          <label key={student.id} className="flex items-center justify-between gap-3 rounded-lg border border-ink-900/70 bg-surface-sunken px-3 py-2">
             <span className="text-sm text-ink-700">
               {student.studentCode} · {student.name}
             </span>
@@ -109,10 +109,10 @@ export function ScoreForm({ item, onSubmitted }: ScoreFormProps) {
 
       <div className="flex gap-2">
         <Button variant="secondary" onClick={handleSaveDraft} disabled={submitting}>
-          {draftSaved ? t("บันทึกร่างแล้ว ✓") : t("บันทึกร่าง")}
+          {draftSaved ? t("draft_saved") : t("save_draft")}
         </Button>
         <Button onClick={handleSubmit} disabled={!allValid || submitting} className="flex-1">
-          {submitting ? t("กำลังบันทึก...") : t("ส่งคะแนนเพื่อรออนุมัติ")}
+          {submitting ? t("saving") : t("submit_for_approval")}
         </Button>
       </div>
     </div>

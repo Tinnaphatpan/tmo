@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -13,7 +13,21 @@ export class AdminAuditLogController {
   constructor(private readonly auditLogRepository: AuditLogRepository) {}
 
   @Get()
-  list() {
-    return this.auditLogRepository.findAllWithContext();
+  list(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('action') action?: string,
+    @Query('q') q?: string,
+  ) {
+    const toInt = (v: string | undefined, fallback: number) => {
+      const n = Number.parseInt(v ?? '', 10);
+      return Number.isFinite(n) && n >= 0 ? n : fallback;
+    };
+    return this.auditLogRepository.findPage({
+      limit: Math.min(Math.max(toInt(limit, 50), 1), 200),
+      offset: toInt(offset, 0),
+      action: action || undefined,
+      search: q || undefined,
+    });
   }
 }

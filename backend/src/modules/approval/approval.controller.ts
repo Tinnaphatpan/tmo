@@ -17,6 +17,8 @@ import { User } from '../../domain/entities';
 import { contentDispositionFilename } from '../../common/csv';
 import { FileStorage } from '../../common/file-storage';
 import { QueueRepository } from '../queue/queue.repository';
+import { ScoresRepository } from '../scores/scores.repository';
+import { StudentsRepository } from '../students/students.repository';
 import { ApproveScoreSetUseCase } from './use-cases/approve-score-set.use-case';
 
 // Score approval workflow — TEAM_LEADER only, scoped to their own school
@@ -29,11 +31,32 @@ export class ApprovalController {
     private readonly queueRepository: QueueRepository,
     private readonly approveScoreSet: ApproveScoreSetUseCase,
     private readonly fileStorage: FileStorage,
+    private readonly scoresRepository: ScoresRepository,
+    private readonly studentsRepository: StudentsRepository,
   ) {}
 
   @Get()
-  listPending(@CurrentUser() user: User) {
-    return this.queueRepository.findPendingApprovalBySchool(user.schoolId!);
+  async listPending(@CurrentUser() user: User) {
+    const items = await this.queueRepository.findPendingApprovalBySchool(user.schoolId!);
+    if (items.length === 0) return items;
+    // The mentor sees every student's submitted score BEFORE signing off.
+    const [roster, scores] = await Promise.all([
+      this.studentsRepository.findBySchool(user.schoolId!),
+      this.scoresRepository.findByQueueItems(items.map((i) => i.id)),
+    ]);
+    const ordered = [...roster].sort((a, b) => a.seqNo - b.seqNo);
+    return items.map((item) => ({
+      ...item,
+      scores: ordered.map((student) => {
+        const score = scores.find((sc) => sc.queueItemId === item.id && sc.studentId === student.id);
+        return {
+          scoreId: score?.id ?? null,
+          studentCode: student.studentCode,
+          studentName: student.name,
+          value: score?.value ?? null,
+        };
+      }),
+    }));
   }
 
   @Post(':id/approve')

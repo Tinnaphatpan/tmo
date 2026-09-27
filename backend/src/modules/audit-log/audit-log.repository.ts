@@ -11,6 +11,24 @@ export interface CreateAuditLogInput {
   performedBy: string;
 }
 
+export interface AuditLogContext {
+  performedByDisplayName: string;
+  /** Score entries: the student / school / problem the score belongs to. */
+  studentName: string | null;
+  schoolName: string | null;
+  problemNumber: number | null;
+  /** User entries (e.g. USER_ROLE_CHANGED): the account that was changed. */
+  targetUserName: string | null;
+}
+
+export interface AuditLogPageQuery {
+  limit: number;
+  offset: number;
+  action?: string;
+  /** Case-insensitive match on performer, student, school or target user name. */
+  search?: string;
+}
+
 export abstract class AuditLogRepository {
   /**
    * `tx` is typed as `sql.Transaction`, not the general `Executor` — on
@@ -24,4 +42,8 @@ export abstract class AuditLogRepository {
   abstract findAllWithContext(
     executor?: Executor,
   ): Promise<Array<AuditLogEntry & { performedByDisplayName: string }>>;
+  abstract findPage(
+    query: AuditLogPageQuery,
+    executor?: Executor,
+  ): Promise<{ items: Array<AuditLogEntry & AuditLogContext>; total: number }>;
 }

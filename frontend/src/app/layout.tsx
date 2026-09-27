@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Noto_Sans_Thai } from "next/font/google";
-import { I18nProvider, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
+import { I18nProvider } from "@/lib/i18n";
+import { LOCALE_COOKIE, type Locale } from "@/lib/i18n/format";
 import "./globals.css";
 
 // SPEC §3.3 — single font system-wide, Thai + Latin subsets.

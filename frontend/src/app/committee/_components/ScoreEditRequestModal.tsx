@@ -3,17 +3,18 @@
 import { useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
-import type { Score, Student } from "@/lib/types";
 
+import { useT } from "@/lib/i18n";
 interface Props {
-  score: Score;
-  student: Student;
+  score: { id: string; value: number };
+  student: { studentCode: string; name: string };
   onClose: () => void;
   onSubmitted: () => void;
 }
 
 /** SPEC §2.5 POST /api/score-edit-requests — offered once scoring is locked (SPEC §5.2). */
 export function ScoreEditRequestModal({ score, student, onClose, onSubmitted }: Props) {
+  const t = useT();
   const [newValue, setNewValue] = useState(String(score.value));
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export function ScoreEditRequestModal({ score, student, onClose, onSubmitted }: 
   async function handleSubmit() {
     setError(null);
     if (!validValue || reason.trim() === "") {
-      setError("กรุณากรอกคะแนนใหม่ (0-10) และเหตุผล");
+      setError(t("please_enter_the_new_score_0_10_and_a_reason"));
       return;
     }
     setSubmitting(true);
@@ -33,7 +34,7 @@ export function ScoreEditRequestModal({ score, student, onClose, onSubmitted }: 
       await api.post("/score-edit-requests", { scoreId: score.id, newValue: n, reason });
       onSubmitted();
     } catch (err) {
-      setError(getApiErrorMessage(err, "ส่งคำขอไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_send_the_request")));
     } finally {
       setSubmitting(false);
     }
@@ -42,14 +43,14 @@ export function ScoreEditRequestModal({ score, student, onClose, onSubmitted }: 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="card-soft w-full max-w-sm p-6 animate-slide-up">
-        <h2 className="mb-1 text-lg font-bold text-ink-900">ขอแก้ไขคะแนน</h2>
+        <h2 className="mb-1 text-lg font-bold text-ink-900">{t("request_a_score_edit")}</h2>
         <p className="mb-4 text-sm text-ink-500">
-          {student.studentCode} · {student.name} — คะแนนเดิม {score.value.toFixed(2)}
+          {t("code_name_current_score_score", { code: student.studentCode, name: student.name, score: score.value.toFixed(2) })}
         </p>
 
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">คะแนนใหม่ (0-10)</label>
+            <label className="mb-1 block text-sm font-medium text-ink-700">{t("new_score_0_10")}</label>
             <input
               type="number"
               min={0}
@@ -61,7 +62,7 @@ export function ScoreEditRequestModal({ score, student, onClose, onSubmitted }: 
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">เหตุผล</label>
+            <label className="mb-1 block text-sm font-medium text-ink-700">{t("reason")}</label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -78,10 +79,10 @@ export function ScoreEditRequestModal({ score, student, onClose, onSubmitted }: 
 
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onClose} className="flex-1">
-              ยกเลิก
+              {t("cancel")}
             </Button>
             <Button onClick={handleSubmit} disabled={submitting} className="flex-1">
-              {submitting ? "กำลังส่ง..." : "ส่งคำขอ"}
+              {submitting ? t("sending") : t("send_request")}
             </Button>
           </div>
         </div>

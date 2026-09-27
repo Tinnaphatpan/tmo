@@ -22,7 +22,7 @@ function Brand({ title }: { title: string }) {
   return (
     <div className="flex items-center gap-3">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icon.png" alt="" width={32} height={32} className="h-8 w-8 rounded-full bg-white" />
+      <img src="/icon.png" alt="" width={32} height={32} className="h-8 w-8 rounded-full bg-white object-contain" />
       <span className="text-base font-bold tracking-tight text-white">{title}</span>
     </div>
   );
@@ -85,7 +85,7 @@ export function AppSidebar({ title, nav, children }: AppSidebarProps) {
         <Brand title={t(title)} />
         <button
           type="button"
-          aria-label={t("เมนู")}
+          aria-label={t("menu")}
           aria-expanded={open}
           onClick={() => setOpen(true)}
           className="touch-target rounded-lg px-3 text-xl text-white transition-colors hover:bg-white/10"
@@ -98,7 +98,7 @@ export function AppSidebar({ title, nav, children }: AppSidebarProps) {
         <div className="fixed inset-0 z-40 md:hidden print:hidden">
           <button
             type="button"
-            aria-label={t("ปิดเมนู")}
+            aria-label={t("close_menu")}
             className="animate-fade-in absolute inset-0 bg-black/50"
             onClick={() => setOpen(false)}
           />

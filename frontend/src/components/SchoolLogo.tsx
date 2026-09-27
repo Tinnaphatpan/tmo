@@ -18,6 +18,9 @@ const LOGO_EXT: Record<string, "png" | "jpg"> = {
   "SK-KMUTT": "png",
 };
 
+/** Every centre that has a logo file, in the printed schedule's order. */
+export const SCHOOL_LOGO_CODES = Object.keys(LOGO_EXT);
+
 /** Centre logo in a white rounded frame (files: public/images/<code lowercased>.<ext>); initials if unknown. */
 export function SchoolLogo({
   code,
@@ -47,7 +50,7 @@ export function SchoolLogo({
         src={`/images/${code.toLowerCase()}.${ext}`}
         alt=""
         loading="lazy"
-        className="h-full w-full object-contain p-[7%]"
+        className="h-full w-full object-contain p-[2%]"
       />
     </span>
   );

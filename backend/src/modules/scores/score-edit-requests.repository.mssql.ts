@@ -43,6 +43,8 @@ interface ContextRow extends Row {
   StudentCode: string;
   ProblemNumber: number;
   RequestedByDisplayName: string;
+  RequestedByRole: ScoreEditRequestWithContext['requestedByRole'];
+  SchoolId: string;
 }
 
 function toContextEntity(row: ContextRow): ScoreEditRequestWithContext {
@@ -53,6 +55,8 @@ function toContextEntity(row: ContextRow): ScoreEditRequestWithContext {
     studentCode: row.StudentCode,
     problemNumber: row.ProblemNumber,
     requestedByDisplayName: row.RequestedByDisplayName,
+    requestedByRole: row.RequestedByRole,
+    schoolId: row.SchoolId,
   };
 }
 
@@ -60,7 +64,8 @@ const CONTEXT_SELECT = `
   SELECT r.Id, r.ScoreId, r.RequestedBy, r.OldValue, r.NewValue, r.Reason, r.Status,
          r.ReviewedBy, r.ReviewedAt, r.CreatedAt,
          sc.Name AS SchoolName, st.Name AS StudentName, st.StudentCode,
-         q.ProblemNumber, u.DisplayName AS RequestedByDisplayName
+         q.ProblemNumber, u.DisplayName AS RequestedByDisplayName,
+         u.Role AS RequestedByRole, sc.Id AS SchoolId
   FROM ScoreEditRequest r
   JOIN Score sco ON sco.Id = r.ScoreId
   JOIN Student st ON st.Id = sco.StudentId

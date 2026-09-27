@@ -1,8 +1,9 @@
 "use client";
 
 import { usePublicQueue, useClock } from "@/lib/use-public-queue";
-import { ScheduleGrid } from "@/components/ScheduleGrid";
+import { ScheduleGrid } from "./_components/ScheduleGrid";
 
+import { useT } from "@/lib/i18n";
 function ProblemCard({
   problemNumber,
   current,
@@ -12,17 +13,18 @@ function ProblemCard({
   current?: { school: { name: string; code: string | null } };
   next?: { school: { name: string; code: string | null } };
 }) {
+  const t = useT();
   return (
     <div className="card-soft flex flex-col gap-2 p-4">
       <p
         className="font-bold text-saed-600"
         style={{ fontSize: "clamp(1rem, 2.2vw, 1.75rem)" }}
       >
-        ข้อ {problemNumber}
+        {t("problem_n", { n: problemNumber })}
       </p>
       {current ? (
         <div className="animate-fade-in rounded-lg bg-state-active-bg px-3 py-2">
-          <p className="text-xs text-state-active-fg opacity-80">กำลังตรวจ</p>
+          <p className="text-xs text-state-active-fg opacity-80">{t("in_progress")}</p>
           <p
             className="font-semibold text-state-active-fg"
             style={{ fontSize: "clamp(1rem, 2.4vw, 2rem)" }}
@@ -32,12 +34,12 @@ function ProblemCard({
         </div>
       ) : (
         <p className="rounded-lg bg-surface-sunken px-3 py-2 text-sm text-ink-500">
-          ไม่มีศูนย์กำลังตรวจ
+          {t("no_centre_is_being_graded")}
         </p>
       )}
       {next && (
         <p className="text-sm text-ink-500">
-          คิวถัดไป: <span className="font-medium text-ink-700">{next.school.name}</span>
+          {t("up_next")}: <span className="font-medium text-ink-700">{next.school.name}</span>
         </p>
       )}
     </div>
@@ -45,13 +47,14 @@ function ProblemCard({
 }
 
 export default function DisplayPage() {
+  const t = useT();
   const data = usePublicQueue();
   const now = useClock();
 
   if (!data) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-ink-500">
-        กำลังโหลด...
+        {t("loading")}
       </div>
     );
   }

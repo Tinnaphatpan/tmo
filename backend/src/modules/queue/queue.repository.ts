@@ -29,6 +29,11 @@ export abstract class QueueRepository {
   abstract findById(id: string, executor?: Executor): Promise<QueueItem | null>;
   abstract findByIdWithSchool(id: string, executor?: Executor): Promise<QueueItemWithSchool | null>;
   abstract findActiveClaimByUser(userId: string, executor?: Executor): Promise<QueueItem | null>;
+  /** A DONE item this user submitted that its team leader hasn't approved yet — while one exists the user may not claim the next item. */
+  abstract findAwaitingApprovalBySubmitter(
+    userId: string,
+    executor?: Executor,
+  ): Promise<QueueItem | null>;
 
   /**
    * Atomic claim (SPEC §2.6): only succeeds if the row is still WAITING and

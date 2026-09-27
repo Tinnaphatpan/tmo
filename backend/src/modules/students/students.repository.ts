@@ -10,6 +10,8 @@ export interface UpsertStudentInput {
 
 export abstract class StudentsRepository {
   abstract findBySchool(schoolId: string, executor?: Executor): Promise<Student[]>;
+  /** One round trip for many schools; ordered by SchoolId then SeqNo. */
+  abstract findBySchools(schoolIds: string[], executor?: Executor): Promise<Student[]>;
   abstract findById(id: string, executor?: Executor): Promise<Student | null>;
   abstract findByIds(ids: string[], executor?: Executor): Promise<Student[]>;
   /** Upsert keyed on (SchoolId, SeqNo) — used by the student import commit (SPEC §4.1). */

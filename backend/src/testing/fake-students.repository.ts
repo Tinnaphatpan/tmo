@@ -12,6 +12,12 @@ export class FakeStudentsRepository extends StudentsRepository {
     return this.students.filter((s) => s.schoolId === schoolId).sort((a, b) => a.seqNo - b.seqNo);
   }
 
+  async findBySchools(schoolIds: string[]): Promise<Student[]> {
+    return this.students
+      .filter((s) => schoolIds.includes(s.schoolId))
+      .sort((a, b) => a.schoolId.localeCompare(b.schoolId) || a.seqNo - b.seqNo);
+  }
+
   async findById(id: string): Promise<Student | null> {
     return this.students.find((s) => s.id === id) ?? null;
   }

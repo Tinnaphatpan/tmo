@@ -22,7 +22,8 @@
     "seed": "ts-node -r tsconfig-paths/register src/database/seed/seed.ts",
     "migrate:data": "ts-node -r tsconfig-paths/register src/database/migrate-data.ts",
     "prepare:test": "ts-node -r tsconfig-paths/register src/database/prepare-test-data.ts",
-    "reset:test": "ts-node -r tsconfig-paths/register src/database/reset-test-run.ts"
+    "reset:test": "ts-node -r tsconfig-paths/register src/database/reset-test-run.ts",
+    "test:concurrency": "node scripts/concurrency-test.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/noto-sans-thai": "^0.4.2",

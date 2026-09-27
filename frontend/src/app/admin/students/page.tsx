@@ -5,6 +5,7 @@ import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
 import type { Student } from "@/lib/types";
 
+import { useT } from "@/lib/i18n";
 interface ParsedStudentRow {
   ok: boolean;
   schoolCode: string | null;
@@ -21,6 +22,7 @@ interface PreviewResult {
 }
 
 export default function AdminStudentsPage() {
+  const t = useT();
   const [students, setStudents] = useState<Student[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -33,7 +35,7 @@ export default function AdminStudentsPage() {
       const { data } = await api.get<Student[]>("/admin/students");
       setStudents(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "โหลดข้อมูลไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_load_data")));
     }
   }, []);
 
@@ -58,7 +60,7 @@ export default function AdminStudentsPage() {
       const { data } = await api.post<PreviewResult>("/admin/students/import", form);
       setPreview(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "อ่านไฟล์ไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_read_the_file")));
     } finally {
       setBusy(false);
     }
@@ -73,34 +75,34 @@ export default function AdminStudentsPage() {
       form.append("file", file);
       form.append("mode", "commit");
       const { data } = await api.post<{ imported: number }>("/admin/students/import", form);
-      setToast(`นำเข้าสำเร็จ ${data.imported} รายการ`);
+      setToast(t("imported_count_row_s", { count: data.imported }));
       setFile(null);
       setPreview(null);
       await load();
       setTimeout(() => setToast(null), 4000);
     } catch (err) {
-      setError(getApiErrorMessage(err, "นำเข้าไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("import_failed")));
     } finally {
       setBusy(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm("ยืนยันการลบนักเรียนคนนี้?")) return;
+    if (!window.confirm(t("delete_this_student"))) return;
     try {
       await api.delete("/admin/students", { params: { id } });
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err, "ลบไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_delete")));
     }
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-ink-900">จัดการนักเรียน</h2>
+      <h2 className="text-lg font-bold text-ink-900">{t("manage_students")}</h2>
 
       <div className="card-soft space-y-3 p-4">
-        <h3 className="font-semibold text-ink-900">นำเข้ารายชื่อ (.csv / .xlsx)</h3>
+        <h3 className="font-semibold text-ink-900">{t("import_roster_csv_xlsx")}</h3>
         <input
           type="file"
           accept=".csv,.xlsx"
@@ -109,11 +111,11 @@ export default function AdminStudentsPage() {
         />
         <div className="flex gap-2">
           <Button variant="secondary" onClick={handlePreview} disabled={!file || busy}>
-            👀 ดูตัวอย่าง
+            {t("preview")}
           </Button>
           {preview && preview.validCount > 0 && (
             <Button onClick={handleCommit} disabled={busy}>
-              ✅ ยืนยันนำเข้า {preview.validCount} รายการ
+              {t("confirm_import_of_count_row_s", { count: preview.validCount })}
             </Button>
           )}
         </div>
@@ -130,11 +132,11 @@ export default function AdminStudentsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface-sunken text-left text-ink-700">
-                  <th className="px-2 py-1.5">รหัสศูนย์</th>
-                  <th className="px-2 py-1.5">ลำดับ</th>
-                  <th className="px-2 py-1.5">ชื่อ</th>
-                  <th className="px-2 py-1.5">รหัสนักเรียน</th>
-                  <th className="px-2 py-1.5">ผลตรวจ</th>
+                  <th className="px-2 py-1.5">{t("centre_code")}</th>
+                  <th className="px-2 py-1.5">{t("no")}</th>
+                  <th className="px-2 py-1.5">{t("name")}</th>
+                  <th className="px-2 py-1.5">{t("student_code")}</th>
+                  <th className="px-2 py-1.5">{t("check_result")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -146,7 +148,7 @@ export default function AdminStudentsPage() {
                     <td className="px-2 py-1.5">{row.studentCode ?? "-"}</td>
                     <td className="px-2 py-1.5">
                       {row.ok ? (
-                        <span className="text-state-done-fg">ถูกต้อง</span>
+                        <span className="text-state-done-fg">{t("valid")}</span>
                       ) : (
                         <span className="text-state-active-fg">{row.error}</span>
                       )}
@@ -163,8 +165,8 @@ export default function AdminStudentsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-ink-500">
-              <th className="px-3 py-2">รหัส</th>
-              <th className="px-3 py-2">ชื่อ</th>
+              <th className="px-3 py-2">{t("code")}</th>
+              <th className="px-3 py-2">{t("name")}</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
@@ -175,7 +177,7 @@ export default function AdminStudentsPage() {
                 <td className="px-3 py-2 text-ink-700">{s.name}</td>
                 <td className="px-3 py-2 text-right">
                   <Button variant="danger" onClick={() => handleDelete(s.id)}>
-                    ลบ
+                    {t("delete")}
                   </Button>
                 </td>
               </tr>

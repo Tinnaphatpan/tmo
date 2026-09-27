@@ -14,12 +14,12 @@ import {
 export default function PublicQueuePage() {
   const t = useT();
   const data = usePublicQueue();
-  const rows = data ? buildBoardRows(data) : [];
+  const rows = data ? buildBoardRows(data, t) : [];
 
   return (
     <div className="queue-board min-h-screen bg-[var(--qb-page)]">
       <header className="relative border-b border-black/10 bg-white py-4 text-center">
-        <h1 className="text-[17px] font-bold text-ink-900">TMO Queue Board</h1>
+        <h1 className="text-[17px] font-bold text-ink-900">TMO Dashboard</h1>
         <div className="absolute left-3 top-1/2 -translate-y-1/2">
           <LocaleSwitcher />
         </div>
@@ -27,7 +27,7 @@ export default function PublicQueuePage() {
           href="/login"
           className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--qb-banner-fg)] underline"
         >
-          {t("เข้าสู่ระบบ")}
+          {t("sign_in")}
         </Link>
       </header>
 
@@ -35,7 +35,7 @@ export default function PublicQueuePage() {
         {data && (
           <section>
             <h2 className="mb-3 px-1 text-xl font-bold text-ink-900">
-              {t("สถานะแต่ละข้อตอนนี้")}
+              {t("status_of_each_problem")}
             </h2>
             <ProblemStatusCards data={data} />
           </section>
@@ -43,26 +43,26 @@ export default function PublicQueuePage() {
 
         <section className="rounded-[28px] bg-[var(--qb-card)] p-3 shadow-[0_2px_10px_rgba(60,50,30,0.08)] sm:p-6">
           <h2 className="mb-4 text-2xl font-bold text-ink-900">
-            {t("ตารางคิวรวม")}
+            {t("full_queue_table")}
           </h2>
 
           {!data ? (
             <PageSkeleton rows={8} />
           ) : rows.length === 0 ? (
             <p className="py-8 text-center text-ink-500">
-              {t("ยังไม่มีตารางคิว")}
+              {t("no_queue_schedule_yet")}
             </p>
           ) : (
             <QueueBoardTable
               rows={rows}
               problemNumbers={data.problemNumbers}
-              banner={boardBanner(data.slots)}
+              banner={boardBanner(data.slots, t)}
             />
           )}
 
           {data && (
             <p className="mt-4 text-sm text-ink-500">
-              {t("รอตรวจ {w} · กำลังตรวจ {p} · ตรวจแล้ว {d} จากทั้งหมด {t}", {
+              {t("w_waiting_p_in_progress_d_done_of_t", {
                 w: data.counts.waiting,
                 p: data.counts.inProgress,
                 d: data.counts.done,
@@ -72,7 +72,7 @@ export default function PublicQueuePage() {
                 href="/api/bff/schedule/export"
                 className="ml-3 text-[var(--qb-banner-fg)] underline"
               >
-                {t("ดาวน์โหลดตารางเวลา (CSV)")}
+                {t("download_schedule_csv")}
               </a>
             </p>
           )}

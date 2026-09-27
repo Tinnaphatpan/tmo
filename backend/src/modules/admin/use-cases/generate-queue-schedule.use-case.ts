@@ -15,6 +15,10 @@ const BANGKOK_OFFSET = '+07:00';
 export interface GenerateQueueScheduleInput {
   /** YYYY-MM-DD (Bangkok calendar day); defaults to today in Bangkok. */
   date?: string;
+  /** HH:mm Bangkok time of the first slot; defaults to 13:30. */
+  startTime?: string;
+  /** Minutes per slot; defaults to 15. */
+  slotMinutes?: number;
   actorId: string;
 }
 
@@ -49,9 +53,11 @@ export class GenerateQueueScheduleUseCase {
 
   async execute(input: GenerateQueueScheduleInput): Promise<GenerateQueueScheduleResult> {
     const date = input.date ?? todayInBangkok();
-    const firstSlotAt = new Date(`${date}T${FIRST_SLOT}:00${BANGKOK_OFFSET}`);
+    const startTime = input.startTime ?? FIRST_SLOT;
+    const slotMinutes = input.slotMinutes ?? SLOT_MINUTES;
+    const firstSlotAt = new Date(`${date}T${startTime}:00${BANGKOK_OFFSET}`);
     if (Number.isNaN(firstSlotAt.getTime())) {
-      throw new BadRequestException('รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)');
+      throw new BadRequestException('รูปแบบวันที่หรือเวลาไม่ถูกต้อง (วันที่ YYYY-MM-DD, เวลา HH:mm)');
     }
 
     const schools = sortSchoolsForSchedule(await this.schoolsRepository.findAll());
@@ -71,7 +77,7 @@ export class GenerateQueueScheduleUseCase {
 
     const cells = generateSchedule(
       schools.map((s) => ({ id: s.id, code: s.code })),
-      { problemCount: PROBLEM_COUNT, slotMinutes: SLOT_MINUTES, firstSlotAt },
+      { problemCount: PROBLEM_COUNT, slotMinutes, firstSlotAt },
     );
 
     let created = 0;
@@ -101,7 +107,7 @@ export class GenerateQueueScheduleUseCase {
           entityType: 'Queue',
           entityId: 'schedule',
           oldValue: JSON.stringify({ existingItems: existing.length }),
-          newValue: JSON.stringify({ date, created, updated, total: cells.length }),
+          newValue: JSON.stringify({ date, startTime, slotMinutes, created, updated, total: cells.length }),
           performedBy: input.actorId,
         },
         tx,

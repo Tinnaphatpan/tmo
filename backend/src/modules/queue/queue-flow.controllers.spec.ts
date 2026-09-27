@@ -31,6 +31,10 @@ import { ReleaseQueueItemUseCase } from './use-cases/release-queue-item.use-case
 import { SkipQueueItemUseCase } from './use-cases/skip-queue-item.use-case';
 import { SubmitScoreUseCase } from './use-cases/submit-score.use-case';
 import { ScoreEditRequestsController } from '../scores/score-edit-requests.controller';
+import { ReviewScoreEditRequestUseCase } from '../scores/use-cases/review-score-edit-request.use-case';
+import { ScoreSheetGenerator } from '../approval/score-sheet-generator';
+import { FileStorage } from '../../common/file-storage';
+import { FakeFileStorage } from '../../testing/fake-file-storage';
 import { CreateScoreEditRequestUseCase } from '../scores/use-cases/create-score-edit-request.use-case';
 import { TeamLeaderReportController } from '../team-leader/team-leader-report.controller';
 import { GetTeamLeaderReportUseCase } from '../team-leader/get-team-leader-report.use-case';
@@ -83,6 +87,9 @@ describe('Queue / scoring / edit-request / export endpoints (HTTP)', () => {
         SkipQueueItemUseCase,
         SubmitScoreUseCase,
         CreateScoreEditRequestUseCase,
+        ReviewScoreEditRequestUseCase,
+        ScoreSheetGenerator,
+        { provide: FileStorage, useValue: new FakeFileStorage() },
         GetTeamLeaderReportUseCase,
       ],
     });
@@ -257,10 +264,10 @@ describe('Queue / scoring / edit-request / export endpoints (HTTP)', () => {
       });
     };
 
-    it('401 anonymous; 403 for ADMIN/TEAM_LEADER', async () => {
+    it('401 anonymous; 403 for ADMIN', async () => {
       const body = { scoreId: SCORE, newValue: 6, reason: 'r' };
       await http_().post('/score-edit-requests').send(body).expect(401);
-      for (const role of ['ADMIN', 'TEAM_LEADER'] as const) {
+      for (const role of ['ADMIN'] as const) {
         await http_().post('/score-edit-requests').set('Authorization', api.login({ role })).send(body).expect(403);
       }
     });

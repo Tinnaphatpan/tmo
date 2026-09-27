@@ -19,6 +19,8 @@ import { TransactionRunner } from '../../database/transaction-runner';
 import { FileStorage } from '../../common/file-storage';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ScoreSheetGenerator } from '../approval/score-sheet-generator';
+import { UserAssignmentRepository } from '../user-assignment/user-assignment.repository';
+import { FakeUserAssignmentRepository } from '../../testing/fake-user-assignment.repository';
 import { ReviewScoreEditRequestUseCase } from '../scores/use-cases/review-score-edit-request.use-case';
 import { TeamLeaderScoreEditRequestsController } from './team-leader-score-edit-requests.controller';
 import { TeamLeaderReportController } from './team-leader-report.controller';
@@ -52,6 +54,7 @@ describe('Team leader controllers (HTTP)', () => {
         { provide: AuditLogRepository, useValue: new FakeAuditLogRepository() },
         { provide: TransactionRunner, useValue: new FakeTransactionRunner() },
         { provide: FileStorage, useValue: new FakeFileStorage() },
+        { provide: UserAssignmentRepository, useValue: new FakeUserAssignmentRepository() },
         { provide: RealtimeService, useValue: { notifyChange, stream: EMPTY } },
         ScoreSheetGenerator,
         ReviewScoreEditRequestUseCase,

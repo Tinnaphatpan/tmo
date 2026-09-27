@@ -16,13 +16,14 @@ interface ScoreEditRequestItem {
   studentCode: string;
   problemNumber: number;
   requestedByDisplayName: string;
+  requestedByRole: string;
   createdAt: string;
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: "รอดำเนินการ",
-  APPROVED: "อนุมัติแล้ว",
-  REJECTED: "ปฏิเสธแล้ว",
+  PENDING: "pending",
+  APPROVED: "approved",
+  REJECTED: "rejected",
 };
 
 export default function TeamLeaderScoreEditRequestsPage() {
@@ -37,7 +38,7 @@ export default function TeamLeaderScoreEditRequestsPage() {
       );
       setItems(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, t("โหลดข้อมูลไม่สำเร็จ")));
+      setError(getApiErrorMessage(err, t("failed_to_load_data")));
     }
   }, []);
 
@@ -51,7 +52,7 @@ export default function TeamLeaderScoreEditRequestsPage() {
       await api.patch(`/team-leader/score-edit-requests/${id}`, { action });
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err, t("ดำเนินการไม่สำเร็จ")));
+      setError(getApiErrorMessage(err, t("action_failed")));
     }
   }
 
@@ -64,21 +65,21 @@ export default function TeamLeaderScoreEditRequestsPage() {
 
   return (
     <div className="space-y-6 p-4">
-      <h2 className="text-lg font-bold text-ink-900">{t("คำขอแก้ไขคะแนน")}</h2>
+      <h2 className="text-lg font-bold text-ink-900">{t("score_edit_requests")}</h2>
       {error && <p className="text-sm text-state-active-fg">{error}</p>}
 
       <div className="space-y-6">
         {pending.length === 0 && (
-          <p className="text-sm text-ink-500">{t("ไม่มีคำขอค้างดำเนินการ")}</p>
+          <p className="text-sm text-ink-500">{t("no_pending_requests")}</p>
         )}
         {problems.map((problem) => (
           <section key={problem} className="space-y-3">
             <h3 className="flex items-center gap-2 font-semibold text-ink-900">
               <span className="rounded-full bg-state-queued-bg px-3 py-0.5 text-sm text-state-queued-fg">
-                {t("ข้อ {n}", { n: problem })}
+                {t("problem_n", { n: problem })}
               </span>
               <span className="text-xs font-normal text-ink-500">
-                {t("ส่งถึงกรรมการประจำข้อ {n} · {count} คำขอ", {
+                {t("sent_to_problem_n_committee_count_request_s", {
                   n: problem,
                   count: pending.filter((i) => i.problemNumber === problem).length,
                 })}
@@ -95,7 +96,7 @@ export default function TeamLeaderScoreEditRequestsPage() {
                         {item.studentName}
                       </p>
                       <p className="text-sm text-ink-500">
-                        {t("ข้อ {n} · ขอโดย {name}", {
+                        {t("problem_n_requested_by_name", {
                           n: item.problemNumber,
                           name: item.requestedByDisplayName,
                         })}
@@ -112,19 +113,25 @@ export default function TeamLeaderScoreEditRequestsPage() {
                     </p>
                   </div>
                   <p className="mb-3 text-sm text-ink-700">
-                    {t("เหตุผล: {reason}", { reason: item.reason })}
+                    {t("reason_reason", { reason: item.reason })}
                   </p>
-                  <div className="flex gap-2">
-                    <Button onClick={() => handleReview(item.id, "approve")}>
-                      {t("อนุมัติ")}
-                    </Button>
-                    <Button
-                      variant="danger"
-                      onClick={() => handleReview(item.id, "reject")}
-                    >
-                      {t("ปฏิเสธ")}
-                    </Button>
-                  </div>
+                  {item.requestedByRole === "TEAM_LEADER" ? (
+                    <p className="rounded-lg bg-state-pending-approval-bg px-3 py-2 text-sm text-state-pending-approval-fg">
+                      {t("your_request_awaiting_the_judge_for_problem", { n: item.problemNumber })}
+                    </p>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleReview(item.id, "approve")}>
+                        {t("approve")}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => handleReview(item.id, "reject")}
+                      >
+                        {t("reject")}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
           </section>
@@ -133,7 +140,7 @@ export default function TeamLeaderScoreEditRequestsPage() {
 
       {resolved.length > 0 && (
         <div>
-          <h3 className="mb-2 font-semibold text-ink-900">{t("ดำเนินการแล้ว")}</h3>
+          <h3 className="mb-2 font-semibold text-ink-900">{t("resolved")}</h3>
           <div className="card-soft divide-y divide-line p-2">
             {resolved.map((item) => (
               <div
@@ -141,9 +148,9 @@ export default function TeamLeaderScoreEditRequestsPage() {
                 className="flex items-center justify-between p-3 text-sm"
               >
                 <span className="text-ink-700">
-                  {item.schoolName} · {item.studentCode} · ข้อ{" "}
-                  {item.problemNumber} · {item.oldValue.toFixed(2)} →{" "}
-                  {item.newValue.toFixed(2)}
+                  {item.schoolName} · {item.studentCode} ·{" "}
+                  {t("problem_n", { n: item.problemNumber })} ·{" "}
+                  {item.oldValue.toFixed(2)} → {item.newValue.toFixed(2)}
                 </span>
                 <span
                   className={

@@ -16,6 +16,8 @@ export interface MyQueueResult {
   items: MyQueueItem[];
   currentItemId: string | null;
   scoringLocked: boolean;
+  /** True while a score set this user submitted awaits team-leader approval — they can't claim the next item. */
+  awaitingApproval: boolean;
   updatedAt: string;
 }
 
@@ -56,15 +58,28 @@ export class GetMyQueueUseCase {
     );
     const settings = await this.settingsRepository.get();
 
-    const rosterCache = new Map<string, Student[]>();
+    // Two batched reads instead of one query per item / per school.
+    const [allStudents, allScores] = await Promise.all([
+      this.studentsRepository.findBySchools([...new Set(baseItems.map((i) => i.schoolId))]),
+      this.scoresRepository.findByQueueItems(baseItems.map((i) => i.id)),
+    ]);
+    const rosterBySchool = new Map<string, Student[]>();
+    for (const s of allStudents) {
+      const list = rosterBySchool.get(s.schoolId) ?? [];
+      list.push(s);
+      rosterBySchool.set(s.schoolId, list);
+    }
+    const scoresByItem = new Map<string, Score[]>();
+    for (const sc of allScores) {
+      const list = scoresByItem.get(sc.queueItemId) ?? [];
+      list.push(sc);
+      scoresByItem.set(sc.queueItemId, list);
+    }
+
     const items: MyQueueItem[] = [];
     for (const item of baseItems) {
-      let students = rosterCache.get(item.schoolId);
-      if (!students) {
-        students = await this.studentsRepository.findBySchool(item.schoolId);
-        rosterCache.set(item.schoolId, students);
-      }
-      const scores = await this.scoresRepository.findByQueueItem(item.id);
+      const students = rosterBySchool.get(item.schoolId) ?? [];
+      const scores = scoresByItem.get(item.id) ?? [];
       items.push({
         id: item.id,
         schoolId: item.schoolId,
@@ -89,11 +104,15 @@ export class GetMyQueueUseCase {
       (i) => i.status === 'IN_PROGRESS' && i.claimedByUserId === userId,
     );
 
+    const awaitingApproval =
+      (await this.queueRepository.findAwaitingApprovalBySubmitter(userId)) !== null;
+
     return {
       problemNumbers,
       items,
       currentItemId: current?.id ?? null,
       scoringLocked: settings.scoringLocked,
+      awaitingApproval,
       updatedAt: new Date().toISOString(),
     };
   }

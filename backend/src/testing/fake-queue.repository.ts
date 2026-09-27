@@ -46,6 +46,15 @@ export class FakeQueueRepository extends QueueRepository {
     );
   }
 
+  async findAwaitingApprovalBySubmitter(userId: string): Promise<QueueItem | null> {
+    return (
+      this.items.find(
+        (i) =>
+          i.submittedByUserId === userId && i.status === 'DONE' && i.approvalStatus === 'PENDING',
+      ) ?? null
+    );
+  }
+
   // No `await` before the mutation — see class doc comment.
   async claim(id: string, userId: string): Promise<boolean> {
     const item = this.items.find((i) => i.id === id);

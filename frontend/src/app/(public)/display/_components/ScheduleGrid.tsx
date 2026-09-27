@@ -1,5 +1,6 @@
 import type { QueueSlot } from "@/lib/types";
 
+import { useT } from "@/lib/i18n";
 const STATUS_CELL_CLASS: Record<string, string> = {
   WAITING: "bg-grid-cell text-ink-500",
   IN_PROGRESS: "bg-state-active-bg text-state-active-fg font-semibold",
@@ -21,6 +22,7 @@ export function ScheduleGrid({
   problemNumbers: number[];
   maxRows?: number;
 }) {
+  const t = useT();
   const rows = maxRows ? slots.slice(0, maxRows) : slots;
 
   return (
@@ -29,11 +31,11 @@ export function ScheduleGrid({
         <thead>
           <tr className="bg-grid-head text-ink-900">
             <th className="border-b border-grid-line px-3 py-2 text-left font-semibold">
-              ช่วงเวลา
+              {t("time_slot")}
             </th>
             {problemNumbers.map((p) => (
               <th key={p} className="border-b border-grid-line px-3 py-2 text-center font-semibold">
-                ข้อ {p}
+                {t("problem_n", { n: p })}
               </th>
             ))}
           </tr>

@@ -89,5 +89,7 @@ export interface MyQueueResult {
   items: MyQueueItem[];
   currentItemId: string | null;
   scoringLocked: boolean;
+  /** A score set this user submitted still awaits team-leader approval — the next item can't be claimed yet. */
+  awaitingApproval: boolean;
   updatedAt: string;
 }

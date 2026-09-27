@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
 
+import { useT } from "@/lib/i18n";
 interface ScoreExportRow {
   schoolName: string;
   schoolCode: string | null;
@@ -17,6 +18,7 @@ interface ScoreExportRow {
 }
 
 export default function AdminScoresPage() {
+  const t = useT();
   const [rows, setRows] = useState<ScoreExportRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,17 +26,17 @@ export default function AdminScoresPage() {
     api
       .get<ScoreExportRow[]>("/admin/scores")
       .then(({ data }) => setRows(data))
-      .catch((err) => setError(getApiErrorMessage(err, "โหลดข้อมูลไม่สำเร็จ")));
+      .catch((err) => setError(getApiErrorMessage(err, t("failed_to_load_data"))));
   }, []);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-ink-900">คะแนนทั้งหมด</h2>
+        <h2 className="text-lg font-bold text-ink-900">{t("all_scores")}</h2>
         {/* File download, not a page — next/link's client-side nav doesn't apply. */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href="/api/bff/admin/scores/export">
-          <Button variant="secondary">ส่งออก CSV</Button>
+          <Button variant="secondary">{t("export_csv")}</Button>
         </a>
       </div>
 
@@ -44,13 +46,13 @@ export default function AdminScoresPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-ink-500">
-              <th className="px-3 py-2">โรงเรียน</th>
-              <th className="px-3 py-2">รหัสนักเรียน</th>
-              <th className="px-3 py-2">ชื่อ</th>
-              <th className="px-3 py-2">ข้อ</th>
-              <th className="px-3 py-2">คะแนน</th>
-              <th className="px-3 py-2">กรรมการ</th>
-              <th className="px-3 py-2">เวลาบันทึก</th>
+              <th className="px-3 py-2">{t("schools")}</th>
+              <th className="px-3 py-2">{t("student_code")}</th>
+              <th className="px-3 py-2">{t("name")}</th>
+              <th className="px-3 py-2">{t("problem")}</th>
+              <th className="px-3 py-2">{t("score")}</th>
+              <th className="px-3 py-2">{t("committee")}</th>
+              <th className="px-3 py-2">{t("saved_at")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">

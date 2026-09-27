@@ -5,19 +5,26 @@ import { ScoresRepository } from '../scores.repository';
 import { ScoreEditRequestsRepository } from '../score-edit-requests.repository';
 import { QueueRepository } from '../../queue/queue.repository';
 import { ScoreSheetGenerator } from '../../approval/score-sheet-generator';
+import { UsersRepository } from '../../users/users.repository';
+import { UserAssignmentRepository } from '../../user-assignment/user-assignment.repository';
+import { Role } from '../../../domain/entities';
 
 export interface ReviewScoreEditRequestInput {
   requestId: string;
   action: 'approve' | 'reject';
   reviewerId: string;
+  /** Omitted = TEAM_LEADER (the original reviewer). COMMITTEE/STAFF review
+   * requests raised by a team leader for the problem they are assigned to. */
+  reviewerRole?: Role;
   /** The reviewing TEAM_LEADER's own school — never trust a client-supplied
    * schoolId, always the caller's DB-reloaded User.schoolId (SPEC §4.4). */
-  reviewerSchoolId: string;
+  reviewerSchoolId?: string | null;
 }
 
 /**
- * TEAM_LEADER-only, school-scoped (moved off ADMIN — a school's own team
- * leader reviews its own edit requests, not a global admin). Approve is the
+ * A school's TEAM_LEADER reviews edit requests raised by that school's judges
+ * (moved off ADMIN); requests raised by the TEAM_LEADER themselves are reviewed
+ * by the COMMITTEE/STAFF assigned to that problem. Approve is the
  * one path outside direct scoring that writes to Score, so it goes through
  * the same TransactionRunner + AuditLog pairing rule as SubmitScoreUseCase
  * (SPEC §1.4). Reject only changes the request's own status — no Score
@@ -37,6 +44,8 @@ export class ReviewScoreEditRequestUseCase {
     private readonly auditLogRepository: AuditLogRepository,
     private readonly scoreSheetGenerator: ScoreSheetGenerator,
     private readonly transactionRunner: TransactionRunner,
+    private readonly usersRepository: UsersRepository,
+    private readonly userAssignmentRepository: UserAssignmentRepository,
   ) {}
 
   async execute(input: ReviewScoreEditRequestInput): Promise<void> {
@@ -56,8 +65,27 @@ export class ReviewScoreEditRequestUseCase {
     if (!queueItem) {
       throw new NotFoundException('ไม่พบรายการคิวนี้');
     }
-    if (queueItem.schoolId !== input.reviewerSchoolId) {
-      throw new ForbiddenException('คุณไม่มีสิทธิ์พิจารณาคำขอแก้ไขคะแนนของศูนย์นี้');
+    const requester = await this.usersRepository.findById(editRequest.requestedBy);
+    const requestedByTeamLeader = requester?.role === 'TEAM_LEADER';
+
+    if ((input.reviewerRole ?? 'TEAM_LEADER') === 'TEAM_LEADER') {
+      if (queueItem.schoolId !== input.reviewerSchoolId) {
+        throw new ForbiddenException('คุณไม่มีสิทธิ์พิจารณาคำขอแก้ไขคะแนนของศูนย์นี้');
+      }
+      if (requestedByTeamLeader) {
+        // Mentor-raised requests are checked by the judge who scored the problem.
+        throw new ForbiddenException('คำขอจากหัวหน้าทีมต้องให้กรรมการประจำข้อพิจารณา');
+      }
+    } else {
+      const scope = await this.userAssignmentRepository.findScopeByUser(input.reviewerId);
+      const inScope = scope.some(
+        (sc) =>
+          sc.problemNumber === queueItem.problemNumber &&
+          (sc.schoolId === null || sc.schoolId === queueItem.schoolId),
+      );
+      if (!inScope || !requestedByTeamLeader) {
+        throw new ForbiddenException('คุณไม่มีสิทธิ์พิจารณาคำขอแก้ไขคะแนนนี้');
+      }
     }
 
     if (input.action === 'reject') {

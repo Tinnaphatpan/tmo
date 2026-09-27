@@ -1,21 +1,33 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { ScoreEditRequest } from '../../../domain/entities';
+import { Role, ScoreEditRequest } from '../../../domain/entities';
+import { QueueRepository } from '../../queue/queue.repository';
 import { ScoresRepository } from '../scores.repository';
 import { ScoreEditRequestsRepository } from '../score-edit-requests.repository';
 
 export interface CreateScoreEditRequestInput {
   scoreId: string;
+  /** The requesting user's id (judge or team leader). */
   judgeId: string;
+  /** Omitted = COMMITTEE/STAFF behaviour (must own the score). */
+  requesterRole?: Role;
+  /** The requesting TEAM_LEADER's own school (DB-reloaded, never client-supplied). */
+  requesterSchoolId?: string | null;
   newValue: number;
   reason: string;
 }
 
-/** SPEC §2.5 POST /api/score-edit-requests. */
+/**
+ * SPEC §2.5 POST /api/score-edit-requests. A COMMITTEE/STAFF judge may only
+ * request a correction to a score they entered; a TEAM_LEADER (mentor) may
+ * request one for any score of their own school — the judge who scored that
+ * problem then reviews it (see ReviewScoreEditRequestUseCase).
+ */
 @Injectable()
 export class CreateScoreEditRequestUseCase {
   constructor(
     private readonly scoresRepository: ScoresRepository,
     private readonly scoreEditRequestsRepository: ScoreEditRequestsRepository,
+    private readonly queueRepository: QueueRepository,
   ) {}
 
   async execute(input: CreateScoreEditRequestInput): Promise<ScoreEditRequest> {
@@ -23,7 +35,13 @@ export class CreateScoreEditRequestUseCase {
     if (!score) {
       throw new NotFoundException('ไม่พบคะแนนนี้');
     }
-    if (score.judgeId !== input.judgeId) {
+
+    if (input.requesterRole === 'TEAM_LEADER') {
+      const queueItem = await this.queueRepository.findById(score.queueItemId);
+      if (!queueItem || queueItem.schoolId !== input.requesterSchoolId) {
+        throw new ForbiddenException('คุณไม่มีสิทธิ์ขอแก้ไขคะแนนของศูนย์นี้');
+      }
+    } else if (score.judgeId !== input.judgeId) {
       throw new ForbiddenException('คุณไม่ใช่กรรมการเจ้าของคะแนนนี้');
     }
 

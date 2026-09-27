@@ -1,4 +1,4 @@
-import { ScoreEditRequest } from '../../domain/entities';
+import { Role, ScoreEditRequest } from '../../domain/entities';
 import { Executor } from '../../database/types';
 
 export interface CreateScoreEditRequestInput {
@@ -15,6 +15,9 @@ export interface ScoreEditRequestWithContext extends ScoreEditRequest {
   studentCode: string;
   problemNumber: number;
   requestedByDisplayName: string;
+  /** Role of the requester: TEAM_LEADER requests are reviewed by the problem's judge, everything else by the team leader. */
+  requestedByRole: Role;
+  schoolId: string;
 }
 
 export abstract class ScoreEditRequestsRepository {

@@ -350,7 +350,8 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
         undefined as never,
       );
       const res = await http().get('/admin/audit-log').set('Authorization', admin()).expect(200);
-      expect(res.body).toEqual([expect.objectContaining({ action: 'SCORE_CREATED', performedByDisplayName: 'x' })]);
+      expect(res.body.total).toBe(1);
+      expect(res.body.items).toEqual([expect.objectContaining({ action: 'SCORE_CREATED', performedByDisplayName: 'x' })]);
     });
 
     it('dashboard aggregates counts and the lock state', async () => {

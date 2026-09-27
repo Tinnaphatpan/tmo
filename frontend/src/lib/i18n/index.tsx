@@ -1,22 +1,14 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { EN } from "./en";
+import { LOCALE_COOKIE, translate, type Locale } from "./format";
 
-export type Locale = "th" | "en";
-export const LOCALE_COOKIE = "locale";
+export { LOCALE_COOKIE, type Locale };
 
 interface I18nValue {
   locale: Locale;
   setLocale: (l: Locale) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
-}
-
-function translate(locale: Locale, key: string, params?: Record<string, string | number>) {
-  const text = (locale === "en" && EN[key]) || key;
-  return params
-    ? text.replace(/\{(\w+)\}/g, (m, name) => (name in params ? String(params[name]) : m))
-    : text;
 }
 
 const I18nContext = createContext<I18nValue>({

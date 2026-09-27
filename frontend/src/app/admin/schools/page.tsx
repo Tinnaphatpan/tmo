@@ -5,7 +5,9 @@ import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
 import type { SchoolRef } from "@/lib/types";
 
+import { useT } from "@/lib/i18n";
 export default function AdminSchoolsPage() {
+  const t = useT();
   const [schools, setSchools] = useState<SchoolRef[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<SchoolRef | null>(null);
@@ -18,7 +20,7 @@ export default function AdminSchoolsPage() {
       const { data } = await api.get<SchoolRef[]>("/admin/schools");
       setSchools(data);
     } catch (err) {
-      setError(getApiErrorMessage(err, "โหลดข้อมูลไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_load_data")));
     }
   }, []);
 
@@ -45,51 +47,51 @@ export default function AdminSchoolsPage() {
       startEdit(null);
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err, "บันทึกไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_save")));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm("ยืนยันการลบโรงเรียนนี้?")) return;
+    if (!window.confirm(t("delete_this_school"))) return;
     setError(null);
     try {
       await api.delete("/admin/schools", { params: { id } });
       await load();
     } catch (err) {
-      setError(getApiErrorMessage(err, "ลบไม่สำเร็จ"));
+      setError(getApiErrorMessage(err, t("failed_to_delete")));
     }
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-ink-900">จัดการโรงเรียน</h2>
+      <h2 className="text-lg font-bold text-ink-900">{t("manage_schools")}</h2>
 
       <div className="card-soft p-4">
         <h3 className="mb-3 font-semibold text-ink-900">
-          {editing ? `แก้ไข: ${editing.name}` : "เพิ่มโรงเรียนใหม่"}
+          {editing ? `แก้ไข: ${editing.name}` : t("add_a_new_school")}
         </h3>
         <div className="grid gap-3 sm:grid-cols-[2fr_1fr_auto]">
           <input
-            placeholder="ชื่อโรงเรียน"
+            placeholder={t("school_name")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="touch-target rounded-lg border border-line bg-surface px-3 py-2 text-ink-900 outline-none focus:border-saed-500"
           />
           <input
-            placeholder="รหัส (code)"
+            placeholder={t("code_2")}
             value={code}
             onChange={(e) => setCode(e.target.value)}
             className="touch-target rounded-lg border border-line bg-surface px-3 py-2 text-ink-900 outline-none focus:border-saed-500"
           />
           <div className="flex gap-2">
             <Button onClick={handleSave} disabled={saving || !name}>
-              {editing ? "บันทึก" : "เพิ่ม"}
+              {editing ? t("save") : t("add")}
             </Button>
             {editing && (
               <Button variant="ghost" onClick={() => startEdit(null)}>
-                ยกเลิก
+                {t("cancel")}
               </Button>
             )}
           </div>
@@ -101,8 +103,8 @@ export default function AdminSchoolsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-ink-500">
-              <th className="px-3 py-2">ชื่อ</th>
-              <th className="px-3 py-2">รหัส</th>
+              <th className="px-3 py-2">{t("name")}</th>
+              <th className="px-3 py-2">{t("code")}</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
@@ -114,10 +116,10 @@ export default function AdminSchoolsPage() {
                 <td className="px-3 py-2 text-right">
                   <div className="flex justify-end gap-2">
                     <Button variant="ghost" onClick={() => startEdit(school)}>
-                      แก้ไข
+                      {t("edit")}
                     </Button>
                     <Button variant="danger" onClick={() => handleDelete(school.id)}>
-                      ลบ
+                      {t("delete")}
                     </Button>
                   </div>
                 </td>

@@ -7,7 +7,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
-      // Next resolves `server-only` internally; it is not an installed package.
       "server-only": path.resolve(import.meta.dirname, "vitest.server-only-stub.ts"),
     },
   },

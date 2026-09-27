@@ -136,6 +136,20 @@ describe('ManageQueueUseCase', () => {
     await expect(useCase.move('nope', 'up')).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('setScheduledTime edits a WAITING item (Bangkok time), keeps position; 409 if started, 404 if unknown', async () => {
+    const queueRepo = new FakeQueueRepository();
+    queueRepo.seed(makeQueueItem({ id: 'a', position: 3 }));
+    queueRepo.seed(makeQueueItem({ id: 'b', status: 'IN_PROGRESS' }));
+    const useCase = new ManageQueueUseCase(queueRepo);
+
+    await useCase.setScheduledTime('a', '2026-05-17', '14:45');
+    const a = await queueRepo.findById('a');
+    expect(a?.position).toBe(3);
+    expect(new Date(a!.scheduledAt!).toISOString()).toBe('2026-05-17T07:45:00.000Z');
+    await expect(useCase.setScheduledTime('b', '2026-05-17', '14:45')).rejects.toBeInstanceOf(ConflictException);
+    await expect(useCase.setScheduledTime('nope', '2026-05-17', '14:45')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it('remove deletes the item', async () => {
     const queueRepo = new FakeQueueRepository();
     queueRepo.seed(makeQueueItem({ id: 'a' }));

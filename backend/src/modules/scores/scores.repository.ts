@@ -25,10 +25,14 @@ export interface ScoreExportRow {
   judgeUsername: string;
   recordedAt: Date;
   seqNo: number;
+  /** Score.Id — lets a mentor target one cell with an edit request. */
+  scoreId?: string;
 }
 
 export abstract class ScoresRepository {
   abstract findByQueueItem(queueItemId: string, executor?: Executor): Promise<Score[]>;
+  /** One round trip for many queue items (avoids an N+1 in GET /queue/mine). */
+  abstract findByQueueItems(queueItemIds: string[], executor?: Executor): Promise<Score[]>;
   abstract findById(id: string, executor?: Executor): Promise<Score | null>;
   /**
    * Upsert keyed on (StudentId, QueueItemId) — intentionally without JudgeId

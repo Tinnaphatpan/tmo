@@ -3,7 +3,12 @@ import * as sql from 'mssql';
 import { DB_POOL } from '../../database/database.tokens';
 import { Executor, request } from '../../database/types';
 import { AuditLogEntry } from '../../domain/entities';
-import { AuditLogRepository, CreateAuditLogInput } from './audit-log.repository';
+import {
+  AuditLogContext,
+  AuditLogPageQuery,
+  AuditLogRepository,
+  CreateAuditLogInput,
+} from './audit-log.repository';
 
 interface AuditLogRow {
   Id: string;
@@ -75,5 +80,68 @@ export class MssqlAuditLogRepository extends AuditLogRepository {
       ...toEntity(row),
       performedByDisplayName: row.PerformedByDisplayName,
     }));
+  }
+
+  async findPage(
+    query: AuditLogPageQuery,
+    executor?: Executor,
+  ): Promise<{ items: Array<AuditLogEntry & AuditLogContext>; total: number }> {
+    // EntityId is free text (some rows are not GUIDs, e.g. 'schedule'), so the
+    // joins go through TRY_CAST and simply yield NULLs when nothing matches.
+    const from = `
+      FROM AuditLog a
+      JOIN [User] u ON u.Id = a.PerformedBy
+      LEFT JOIN Score sc ON a.EntityType = 'Score' AND sc.Id = TRY_CAST(a.EntityId AS UNIQUEIDENTIFIER)
+      LEFT JOIN Student st ON st.Id = sc.StudentId
+      LEFT JOIN QueueItem qi ON qi.Id = sc.QueueItemId
+      LEFT JOIN School sch ON sch.Id = st.SchoolId
+      LEFT JOIN [User] tu ON a.EntityType = 'User' AND tu.Id = TRY_CAST(a.EntityId AS UNIQUEIDENTIFIER)
+      WHERE (@action IS NULL OR a.Action = @action)
+        AND (@search IS NULL
+             OR u.DisplayName LIKE @search ESCAPE '\\' OR st.Name LIKE @search ESCAPE '\\'
+             OR sch.Name LIKE @search ESCAPE '\\' OR tu.DisplayName LIKE @search ESCAPE '\\')
+    `;
+    const bind = (r: sql.Request) => {
+      const escaped = query.search?.trim().replace(/[\\%_[]/g, '\\$&');
+      return r
+        .input('action', sql.NVarChar, query.action || null)
+        .input('search', sql.NVarChar, escaped ? `%${escaped}%` : null);
+    };
+    const ex = executor ?? this.pool;
+
+    const count = await bind(request(ex)).query<{ Total: number }>(
+      `SELECT COUNT(*) AS Total ${from}`,
+    );
+    const result = await bind(request(ex))
+      .input('offset', sql.Int, query.offset)
+      .input('limit', sql.Int, query.limit)
+      .query<
+        AuditLogRow & {
+          PerformedByDisplayName: string;
+          StudentName: string | null;
+          SchoolName: string | null;
+          ProblemNumber: number | null;
+          TargetUserName: string | null;
+        }
+      >(`
+        SELECT a.Id, a.Action, a.EntityType, a.EntityId, a.OldValue, a.NewValue,
+               a.PerformedBy, a.CreatedAt, u.DisplayName AS PerformedByDisplayName,
+               st.Name AS StudentName, sch.Name AS SchoolName,
+               qi.ProblemNumber AS ProblemNumber, tu.DisplayName AS TargetUserName
+        ${from}
+        ORDER BY a.CreatedAt DESC, a.Id
+        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+      `);
+    return {
+      total: count.recordset[0].Total,
+      items: result.recordset.map((row) => ({
+        ...toEntity(row),
+        performedByDisplayName: row.PerformedByDisplayName,
+        studentName: row.StudentName,
+        schoolName: row.SchoolName,
+        problemNumber: row.ProblemNumber,
+        targetUserName: row.TargetUserName,
+      })),
+    };
   }
 }

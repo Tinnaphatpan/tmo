@@ -32,7 +32,7 @@ export default function CommitteePage() {
       setData(data);
       setError(null);
     } catch (err) {
-      setError(getApiErrorMessage(err, t("โหลดข้อมูลไม่สำเร็จ")));
+      setError(getApiErrorMessage(err, t("failed_to_load_data")));
     }
   }, [t]);
 
@@ -48,7 +48,7 @@ export default function CommitteePage() {
       await api.post(`/queue/${id}/claim`);
       await load();
     } catch (err) {
-      setActionError(getApiErrorMessage(err, t("รับตรวจไม่สำเร็จ")));
+      setActionError(getApiErrorMessage(err, t("failed_to_claim")));
     } finally {
       setClaimingId(null);
     }
@@ -60,7 +60,7 @@ export default function CommitteePage() {
       await api.post(`/queue/${id}/release`);
       await load();
     } catch (err) {
-      setActionError(getApiErrorMessage(err, t("คืนคิวไม่สำเร็จ")));
+      setActionError(getApiErrorMessage(err, t("failed_to_release")));
     }
   }
 
@@ -82,22 +82,27 @@ export default function CommitteePage() {
     (i) => i.status === "IN_PROGRESS" && i.id !== data.currentItemId,
   );
   const done = data.items.filter((i) => i.status === "DONE");
-  const holdingAnother = data.currentItemId !== null;
+  const holdingAnother = data.currentItemId !== null || data.awaitingApproval;
 
   return (
     <div className="px-4 py-6">
       <header className="mx-auto mb-6 max-w-4xl">
         <div>
-          <h1 className="text-lg font-bold text-ink-900">{t("แผงกรรมการ")}</h1>
+          <h1 className="text-lg font-bold text-ink-900">{t("committee_panel")}</h1>
           {data.scoringLocked && (
             <p className="text-sm text-state-active-fg">
-              ปิดรับคะแนนแล้ว — ใช้ขอแก้ไขคะแนนแทน
+              {t("scoring_is_closed_use_a_score_edit_request_i")}
             </p>
           )}
         </div>
       </header>
 
       <div className="mx-auto max-w-4xl space-y-6">
+        {data.awaitingApproval && (
+          <p className="rounded-lg bg-state-pending-approval-bg px-4 py-3 text-sm font-medium text-state-pending-approval-fg">
+            ⏳ {t("waiting_for_the_team_leader_to_approve_your")}
+          </p>
+        )}
         {actionError && (
           <p className="rounded-lg bg-state-active-bg px-4 py-2 text-sm text-state-active-fg">
             {actionError}
@@ -106,7 +111,7 @@ export default function CommitteePage() {
 
         <section className="card-soft p-5">
           <h2 className="mb-3 font-semibold text-ink-900">
-            {t("กำลังตรวจอยู่")}
+            {t("currently_grading")}
           </h2>
           {current ? (
             <div className="animate-fade-in">
@@ -119,14 +124,14 @@ export default function CommitteePage() {
                     </span>
                   </p>
                   <p className="text-sm text-ink-500">
-                    {t("ข้อ {n}", { n: current.problemNumber })}
+                    {t("problem_n", { n: current.problemNumber })}
                   </p>
                 </div>
                 <Button
                   variant="secondary"
                   onClick={() => handleRelease(current.id)}
                 >
-                  คืนคิว
+                  {t("release")}
                 </Button>
               </div>
               <ScoreForm
@@ -141,21 +146,21 @@ export default function CommitteePage() {
             <div className="animate-fade-in flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-ink-500">
                 {justSubmitted
-                  ? t("ส่งคะแนนเพื่อรออนุมัติจากหัวหน้าทีมแล้ว ✓")
-                  : t("เลือกจากคิวรอตรวจด้านล่าง")}
+                  ? t("scores_sent_for_team_leader_approval")
+                  : t("pick_an_item_from_the_queue_below")}
               </p>
               {nextItem && (
                 <Button
                   variant="next"
-                  disabled={claimingId === nextItem.id}
+                  disabled={claimingId === nextItem.id || data.awaitingApproval}
                   onClick={() => {
                     setJustSubmitted(false);
                     handleClaim(nextItem.id);
                   }}
                 >
                   {claimingId === nextItem.id
-                    ? t("กำลังรับ...")
-                    : t("คิวถัดไป: {school} ข้อ {n} →", {
+                    ? t("claiming")
+                    : t("next_school_problem_n", {
                         school: nextItem.school.name,
                         n: nextItem.problemNumber,
                       })}
@@ -167,10 +172,10 @@ export default function CommitteePage() {
 
         <section className="card-soft p-5">
           <h2 className="mb-3 flex items-center justify-between font-semibold text-ink-900">
-            <span>{t("คิวถัดไป")}</span>
+            <span>{t("up_next")}</span>
             {waitingAll.length > UPCOMING_LIMIT && (
               <span className="text-xs font-normal text-ink-500">
-                {t("แสดง {shown} จาก {total} คิว", {
+                {t("showing_shown_of_total", {
                   shown: UPCOMING_LIMIT,
                   total: waitingAll.length,
                 })}
@@ -178,7 +183,7 @@ export default function CommitteePage() {
             )}
           </h2>
           {waiting.length === 0 ? (
-            <p className="text-sm text-ink-500">{t("ไม่มีคิวรอตรวจ")}</p>
+            <p className="text-sm text-ink-500">{t("no_items_waiting")}</p>
           ) : (
             <ul className="divide-y divide-line">
               {waiting.map((item) => (
@@ -194,7 +199,7 @@ export default function CommitteePage() {
                       </span>
                     </p>
                     <p className="text-sm text-ink-500">
-                      {t("ข้อ {n}", { n: item.problemNumber })}
+                      {t("problem_n", { n: item.problemNumber })}
                     </p>
                   </div>
                   <Button
@@ -202,7 +207,7 @@ export default function CommitteePage() {
                     disabled={holdingAnother || claimingId === item.id}
                     onClick={() => handleClaim(item.id)}
                   >
-                    {claimingId === item.id ? t("กำลังรับ...") : t("รับตรวจ")}
+                    {claimingId === item.id ? t("claiming") : t("claim")}
                   </Button>
                 </li>
               ))}
@@ -212,10 +217,10 @@ export default function CommitteePage() {
 
         <section className="card-soft p-5">
           <h2 className="mb-3 font-semibold text-ink-900">
-            {t("กรรมการท่านอื่นกำลังตรวจ")}
+            {t("being_graded_by_other_judges")}
           </h2>
           {others.length === 0 ? (
-            <p className="text-sm text-ink-500">{t("ไม่มีรายการ")}</p>
+            <p className="text-sm text-ink-500">{t("nothing_here")}</p>
           ) : (
             <ul className="divide-y divide-line">
               {others.map((item) => (
@@ -231,7 +236,7 @@ export default function CommitteePage() {
                       </span>
                     </p>
                     <p className="text-sm text-ink-500">
-                      {t("ข้อ {n}", { n: item.problemNumber })}
+                      {t("problem_n", { n: item.problemNumber })}
                     </p>
                   </div>
                   <StatusBadge status={item.status} />
@@ -242,10 +247,10 @@ export default function CommitteePage() {
         </section>
 
         <section className="card-soft p-5">
-          <h2 className="mb-3 font-semibold text-ink-900">{t("ตรวจแล้ว")}</h2>
+          <h2 className="mb-3 font-semibold text-ink-900">{t("done")}</h2>
           {done.length === 0 ? (
             <p className="text-sm text-ink-500">
-              {t("ยังไม่มีรายการที่ตรวจเสร็จ")}
+              {t("nothing_graded_yet")}
             </p>
           ) : (
             <ul className="divide-y divide-line">
@@ -262,7 +267,7 @@ export default function CommitteePage() {
                           </span>
                         </p>
                         <p className="text-sm text-ink-500">
-                          {t("ข้อ {n} · รวม {total} คะแนน", {
+                          {t("problem_n_total_total", {
                             n: item.problemNumber,
                             total: total.toFixed(2),
                           })}

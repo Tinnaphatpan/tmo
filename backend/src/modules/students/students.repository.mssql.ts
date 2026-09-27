@@ -42,6 +42,19 @@ export class MssqlStudentsRepository extends StudentsRepository {
     return result.recordset.map(toEntity);
   }
 
+  async findBySchools(schoolIds: string[], executor?: Executor): Promise<Student[]> {
+    if (schoolIds.length === 0) return [];
+    const req = request(this.exec(executor));
+    const placeholders = schoolIds.map((id, i) => {
+      req.input(`s${i}`, sql.UniqueIdentifier, id);
+      return `@s${i}`;
+    });
+    const result = await req.query<StudentRow>(
+      `SELECT Id, StudentCode, SeqNo, Name, SchoolId FROM Student WHERE SchoolId IN (${placeholders.join(',')}) ORDER BY SchoolId, SeqNo`,
+    );
+    return result.recordset.map(toEntity);
+  }
+
   async findById(id: string, executor?: Executor): Promise<Student | null> {
     const result = await request(this.exec(executor))
       .input('id', sql.UniqueIdentifier, id)

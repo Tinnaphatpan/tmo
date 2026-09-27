@@ -1,10 +1,12 @@
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Watermark } from "@/components/Watermark";
+import { EditRequestAlertBar } from "@/components/EditRequestAlertBar";
 import { requireRole } from "@/lib/session";
 
 const NAV = [
-  { href: "/committee", label: "งานตรวจ" },
-  { href: "/committee/scoreboard", label: "สรุปคะแนน" },
+  { href: "/committee", label: "grading" },
+  { href: "/committee/scoreboard", label: "scoreboard" },
+  { href: "/committee/score-edit-requests", label: "score_edit_requests" },
 ];
 
 export default async function CommitteeLayout({ children }: { children: React.ReactNode }) {
@@ -13,7 +15,8 @@ export default async function CommitteeLayout({ children }: { children: React.Re
   return (
     <>
       <Watermark displayName={session.displayName} role={session.role} stamp={stamp} />
-      <AppSidebar title="กรรมการ" nav={NAV}>
+      <AppSidebar title="committee" nav={NAV}>
+        <EditRequestAlertBar href="/committee/score-edit-requests" />
         {children}
       </AppSidebar>
     </>

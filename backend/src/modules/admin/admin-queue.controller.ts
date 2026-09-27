@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../domain/entities';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -8,7 +8,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { QueueRepository } from '../queue/queue.repository';
 import { ManageQueueUseCase } from './use-cases/manage-queue.use-case';
 import { GenerateQueueScheduleUseCase } from './use-cases/generate-queue-schedule.use-case';
-import { CreateQueueItemDto, GenerateScheduleDto, MoveQueueItemDto } from './dto/manage-queue.dto';
+import { CreateQueueItemDto, GenerateScheduleDto, MoveQueueItemDto, SetQueueTimeDto } from './dto/manage-queue.dto';
 
 // SPEC §2.5 — /api/admin/queue (ADMIN only).
 @Controller('admin/queue')
@@ -30,7 +30,12 @@ export class AdminQueueController {
   /** Builds the full rotation queue (16 centres x 5 problems with 15-minute slots from 13:30). */
   @Post('generate')
   async generate(@CurrentUser() user: User, @Body() dto: GenerateScheduleDto) {
-    const result = await this.generateSchedule.execute({ date: dto.date, actorId: user.id });
+    const result = await this.generateSchedule.execute({
+      date: dto.date,
+      startTime: dto.startTime,
+      slotMinutes: dto.slotMinutes,
+      actorId: user.id,
+    });
     this.realtimeService.notifyChange();
     return result;
   }
@@ -44,6 +49,13 @@ export class AdminQueueController {
   @Patch()
   async move(@Body() dto: MoveQueueItemDto) {
     await this.manageQueue.move(dto.id, dto.direction);
+    return { ok: true };
+  }
+
+  @Patch(':id/time')
+  async setTime(@Param('id') id: string, @Body() dto: SetQueueTimeDto) {
+    await this.manageQueue.setScheduledTime(id, dto.date, dto.time);
+    this.realtimeService.notifyChange();
     return { ok: true };
   }
 

@@ -18,7 +18,7 @@ function StudentNumbers({ count, tone }: { count: number; tone: string }) {
   if (count <= 0) return null;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      <span className="text-xs text-ink-500">{t("นักเรียนคนที่")}</span>
+      <span className="text-xs text-ink-500">{t("student_no")}</span>
       {Array.from({ length: count }, (_, i) => (
         <span
           key={i}
@@ -55,7 +55,7 @@ export function ProblemStatusCards({ data }: { data: PublicQueueResult }) {
             className="overflow-hidden rounded-3xl border border-black/5 bg-white shadow-[0_2px_10px_rgba(60,50,30,0.08)]"
           >
             <header className="flex items-center justify-between border-b border-orange-100 bg-orange-50 px-4 py-2.5 text-orange-800">
-              <h3 className="font-bold">{t("ข้อ {n}", { n: problem })}</h3>
+              <h3 className="font-bold">{t("problem_n", { n: problem })}</h3>
               {current && !finished && (
                 <SchoolLogo code={current.school.code} size={36} />
               )}
@@ -64,11 +64,11 @@ export function ProblemStatusCards({ data }: { data: PublicQueueResult }) {
             <div className="space-y-3 p-4">
               <div>
                 <p className="text-xs font-medium text-ink-500">
-                  {t("สถานะตอนนี้")}
+                  {t("right_now")}
                 </p>
                 {finished ? (
                   <p className="mt-1 inline-flex rounded-full border border-state-done-border bg-state-done-bg px-3 py-1 text-sm font-medium text-state-done-fg">
-                    {t("ตรวจครบทุกโรงเรียนแล้ว")}
+                    {t("all_schools_graded")}
                   </p>
                 ) : current ? (
                   <div>
@@ -76,7 +76,7 @@ export function ProblemStatusCards({ data }: { data: PublicQueueResult }) {
                       <div className="text-base font-semibold leading-tight text-ink-900">
                         <span className="block text-xs font-medium text-blue-600">
                           <span className="animate-soft-pulse mr-1.5 inline-block h-2 w-2 rounded-full bg-blue-500" />
-                          {t("กำลังตรวจ")}
+                          {t("in_progress")}
                         </span>
                         {current.school.name}
                       </div>
@@ -88,18 +88,18 @@ export function ProblemStatusCards({ data }: { data: PublicQueueResult }) {
                   </div>
                 ) : (
                   <p className="mt-1 inline-flex rounded-full border border-state-queued-border bg-state-queued-bg px-3 py-1 text-sm font-medium text-state-queued-fg">
-                    {t("รอกรรมการรับคิว")}
+                    {t("waiting_for_a_judge")}
                   </p>
                 )}
               </div>
 
               <div className="rounded-2xl bg-[var(--qb-head)] px-3 py-2">
                 <p className="text-xs font-medium text-ink-500">
-                  {t("โรงเรียนถัดไป")}
+                  {t("next_school")}
                 </p>
                 <p className="mt-0.5 flex items-center gap-2 text-sm font-semibold text-ink-900">
                   {next && <SchoolLogo code={next.school.code} size={28} />}
-                  {next ? next.school.name : t("— ไม่มีคิวรอ —")}
+                  {next ? next.school.name : t("nobody_waiting")}
                 </p>
                 {next && (
                   <StudentNumbers

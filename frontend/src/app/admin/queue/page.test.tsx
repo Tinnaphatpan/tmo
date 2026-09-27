@@ -57,7 +57,7 @@ describe("Admin queue page: generate rotation schedule", () => {
 
     await userEvent.click(generateButton());
     expect(confirm).toHaveBeenCalledTimes(1);
-    expect(post).toHaveBeenCalledWith("/admin/queue/generate", { date: date.value });
+    expect(post).toHaveBeenCalledWith("/admin/queue/generate", { date: date.value, startTime: "13:30", slotMinutes: 15 });
     expect(await screen.findByText(/เพิ่มใหม่ 80 รายการ · จัดเวลาใหม่ 0 รายการ \(รวม 80\)/)).toBeInTheDocument();
   });
 
@@ -73,7 +73,7 @@ describe("Admin queue page: generate rotation schedule", () => {
     const loadsBefore = get.mock.calls.length;
     await userEvent.click(generateButton());
 
-    expect(post).toHaveBeenCalledWith("/admin/queue/generate", { date: "2026-05-17" });
+    expect(post).toHaveBeenCalledWith("/admin/queue/generate", { date: "2026-05-17", startTime: "13:30", slotMinutes: 15 });
     await waitFor(() => expect(get.mock.calls.length).toBeGreaterThan(loadsBefore));
   });
 

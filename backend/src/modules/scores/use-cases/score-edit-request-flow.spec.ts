@@ -10,6 +10,7 @@ import { FakeSchoolsRepository } from '../../../testing/fake-schools.repository'
 import { FakeStudentsRepository, makeStudent } from '../../../testing/fake-students.repository';
 import { FakeAuditLogRepository } from '../../../testing/fake-audit-log.repository';
 import { FakeTransactionRunner } from '../../../testing/fake-transaction-runner';
+import { FakeUserAssignmentRepository } from '../../../testing/fake-user-assignment.repository';
 import { FakeFileStorage } from '../../../testing/fake-file-storage';
 
 const FIXTURE_PNG = Buffer.from(
@@ -35,7 +36,8 @@ function setUp() {
     fileStorage,
   );
 
-  const createUseCase = new CreateScoreEditRequestUseCase(scoresRepo, editRequestsRepo);
+  const assignments = new FakeUserAssignmentRepository();
+  const createUseCase = new CreateScoreEditRequestUseCase(scoresRepo, editRequestsRepo, queueRepo);
   const reviewUseCase = new ReviewScoreEditRequestUseCase(
     editRequestsRepo,
     scoresRepo,
@@ -43,6 +45,8 @@ function setUp() {
     auditLogRepo,
     scoreSheetGenerator,
     txRunner,
+    usersRepo,
+    assignments,
   );
 
   queueRepo.seed(makeQueueItem({ id: 'q1', schoolId: 'school-1' }));
@@ -63,6 +67,7 @@ function setUp() {
     fileStorage,
     createUseCase,
     reviewUseCase,
+    assignments,
   };
 }
 
@@ -220,5 +225,100 @@ describe('Score edit request flow (SPEC §8.6 last item)', () => {
     expect(updatedItem?.approvedByUserId).toBe('leader-1'); // unchanged — same sign-off
     expect(updatedItem?.documentPath).not.toBe('fake://pdf/q1-old.pdf');
     expect(fileStorage.pdfs.has(updatedItem!.documentPath!)).toBe(true);
+  });
+
+  describe('mentor (TEAM_LEADER) initiated requests', () => {
+    async function mentorRequest() {
+      const ctx = setUp();
+      const { score } = await ctx.scoresRepo.upsertOne(
+        { studentId: 's1', queueItemId: 'q1', value: 5, judgeId: 'judge-1' },
+      );
+      const request = await ctx.createUseCase.execute({
+        scoreId: score.id,
+        judgeId: 'leader-1',
+        requesterRole: 'TEAM_LEADER',
+        requesterSchoolId: 'school-1',
+        newValue: 7,
+        reason: 'ตรวจทานแล้วคะแนนไม่ตรงกับกระดาษคำตอบ',
+      });
+      return { ...ctx, score, request };
+    }
+
+    it('lets the school’s own mentor request an edit on any score of that school', async () => {
+      const { request } = await mentorRequest();
+      expect(request.status).toBe('PENDING');
+      expect(request.requestedBy).toBe('leader-1');
+    });
+
+    it('rejects a mentor of another school', async () => {
+      const { scoresRepo, createUseCase } = setUp();
+      const { score } = await scoresRepo.upsertOne(
+        { studentId: 's1', queueItemId: 'q1', value: 5, judgeId: 'judge-1' },
+      );
+      await expect(
+        createUseCase.execute({
+          scoreId: score.id,
+          judgeId: 'leader-9',
+          requesterRole: 'TEAM_LEADER',
+          requesterSchoolId: 'school-2',
+          newValue: 7,
+          reason: 'x',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('is approved by the judge assigned to that problem, not by the mentor themself', async () => {
+      const { request, score, reviewUseCase, scoresRepo, assignments } = await mentorRequest();
+
+      await expect(
+        reviewUseCase.execute({
+          requestId: request.id,
+          action: 'approve',
+          reviewerId: 'leader-1',
+          reviewerSchoolId: 'school-1',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      // A judge without the problem in scope can't either.
+      await expect(
+        reviewUseCase.execute({
+          requestId: request.id,
+          action: 'approve',
+          reviewerId: 'judge-1',
+          reviewerRole: 'COMMITTEE',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      assignments.seed('judge-1', [1]);
+      await reviewUseCase.execute({
+        requestId: request.id,
+        action: 'approve',
+        reviewerId: 'judge-1',
+        reviewerRole: 'COMMITTEE',
+      });
+      expect((await scoresRepo.findById(score.id))?.value).toBe(7);
+    });
+
+    it('a judge cannot review a request raised by a fellow judge (still the mentor’s call)', async () => {
+      const { scoresRepo, createUseCase, reviewUseCase, assignments } = setUp();
+      const { score } = await scoresRepo.upsertOne(
+        { studentId: 's1', queueItemId: 'q1', value: 5, judgeId: 'judge-1' },
+      );
+      const request = await createUseCase.execute({
+        scoreId: score.id,
+        judgeId: 'judge-1',
+        newValue: 8,
+        reason: 'r',
+      });
+      assignments.seed('judge-1', [1]);
+      await expect(
+        reviewUseCase.execute({
+          requestId: request.id,
+          action: 'approve',
+          reviewerId: 'judge-1',
+          reviewerRole: 'COMMITTEE',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
   });
 });

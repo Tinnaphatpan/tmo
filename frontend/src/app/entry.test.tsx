@@ -21,8 +21,8 @@ vi.mock("@/lib/api-client", async (orig) => ({
 }));
 
 import RootPage from "./page";
-import LoginPage from "./login/page";
-import PublicQueuePage from "./queue/page";
+import LoginPage from "./(public)/login/page";
+import PublicQueuePage from "./(public)/queue/page";
 
 async function redirectTarget(): Promise<string> {
   try {

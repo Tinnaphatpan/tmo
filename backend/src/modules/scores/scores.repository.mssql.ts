@@ -43,6 +43,7 @@ interface ExportRow {
   JudgeDisplayName: string;
   JudgeUsername: string;
   UpdatedAt: Date;
+  ScoreId: string;
 }
 
 function toExportRow(row: ExportRow): ScoreExportRow {
@@ -57,6 +58,7 @@ function toExportRow(row: ExportRow): ScoreExportRow {
     judgeDisplayName: row.JudgeDisplayName,
     judgeUsername: row.JudgeUsername,
     recordedAt: row.UpdatedAt,
+    scoreId: row.ScoreId,
   };
 }
 
@@ -64,7 +66,7 @@ const EXPORT_SELECT = `
   SELECT sc.Name AS SchoolName, sc.Code AS SchoolCode,
          st.StudentCode, st.Name AS StudentName, st.SeqNo,
          q.ProblemNumber,
-         sco.Value, sco.UpdatedAt,
+         sco.Id AS ScoreId, sco.Value, sco.UpdatedAt,
          u.DisplayName AS JudgeDisplayName, u.Username AS JudgeUsername
   FROM Score sco
   JOIN Student st ON st.Id = sco.StudentId
@@ -92,6 +94,19 @@ export class MssqlScoresRepository extends ScoresRepository {
     return result.recordset.map(toEntity);
   }
 
+  async findByQueueItems(queueItemIds: string[], executor?: Executor): Promise<Score[]> {
+    if (queueItemIds.length === 0) return [];
+    const req = request(this.exec(executor));
+    const placeholders = queueItemIds.map((id, i) => {
+      req.input(`q${i}`, sql.UniqueIdentifier, id);
+      return `@q${i}`;
+    });
+    const result = await req.query<ScoreRow>(
+      `SELECT Id, StudentId, QueueItemId, Value, JudgeId, CreatedAt, UpdatedAt FROM Score WHERE QueueItemId IN (${placeholders.join(',')})`,
+    );
+    return result.recordset.map(toEntity);
+  }
+
   async findById(id: string, executor?: Executor): Promise<Score | null> {
     const result = await request(this.exec(executor))
       .input('id', sql.UniqueIdentifier, id)
@@ -101,24 +116,55 @@ export class MssqlScoresRepository extends ScoresRepository {
     return result.recordset[0] ? toEntity(result.recordset[0]) : null;
   }
 
+  /**
+   * UPDATE first, INSERT only when nothing matched — deliberately NOT MERGE.
+   * MERGE takes serializable key-range locks on UQ_Score_Student_QueueItem, and
+   * concurrent submissions for different queue items deadlocked on those ranges
+   * (each attempt then stalled ~10 s until SQL Server's deadlock monitor picked a
+   * victim). A queue item has exactly one holder, so the only true race left is a
+   * double-submit of the same item; the unique constraint catches that (2627/2601)
+   * and we simply retry, which then takes the UPDATE branch.
+   */
   async upsertOne(input: UpsertScoreInput, executor: Executor): Promise<UpsertScoreResult> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.upsertOnce(input, executor);
+      } catch (err) {
+        const num = (err as { number?: number })?.number;
+        if ((num === 2627 || num === 2601) && attempt < 2) continue;
+        throw err;
+      }
+    }
+  }
+
+  private async upsertOnce(input: UpsertScoreInput, executor: Executor): Promise<UpsertScoreResult> {
     const result = await request(executor)
       .input('studentId', sql.UniqueIdentifier, input.studentId)
       .input('queueItemId', sql.UniqueIdentifier, input.queueItemId)
       .input('value', sql.Decimal(4, 2), input.value)
       .input('judgeId', sql.UniqueIdentifier, input.judgeId)
       .query<ScoreRow & { OldValue: number | null }>(`
-        MERGE Score AS target
-        USING (SELECT @studentId AS StudentId, @queueItemId AS QueueItemId) AS src
-          ON target.StudentId = src.StudentId AND target.QueueItemId = src.QueueItemId
-        WHEN MATCHED THEN
-          UPDATE SET Value = @value, JudgeId = @judgeId, UpdatedAt = SYSUTCDATETIME()
-        WHEN NOT MATCHED THEN
-          INSERT (StudentId, QueueItemId, Value, JudgeId)
-          VALUES (@studentId, @queueItemId, @value, @judgeId)
+        DECLARE @r TABLE (
+          Id UNIQUEIDENTIFIER, StudentId UNIQUEIDENTIFIER, QueueItemId UNIQUEIDENTIFIER,
+          Value DECIMAL(4, 2), JudgeId UNIQUEIDENTIFIER, CreatedAt DATETIME2, UpdatedAt DATETIME2,
+          OldValue DECIMAL(4, 2)
+        );
+
+        UPDATE Score
+        SET Value = @value, JudgeId = @judgeId, UpdatedAt = SYSUTCDATETIME()
         OUTPUT inserted.Id, inserted.StudentId, inserted.QueueItemId, inserted.Value,
-               inserted.JudgeId, inserted.CreatedAt, inserted.UpdatedAt,
-               deleted.Value AS OldValue;
+               inserted.JudgeId, inserted.CreatedAt, inserted.UpdatedAt, deleted.Value
+        INTO @r
+        WHERE StudentId = @studentId AND QueueItemId = @queueItemId;
+
+        IF @@ROWCOUNT = 0
+          INSERT INTO Score (StudentId, QueueItemId, Value, JudgeId)
+          OUTPUT inserted.Id, inserted.StudentId, inserted.QueueItemId, inserted.Value,
+                 inserted.JudgeId, inserted.CreatedAt, inserted.UpdatedAt, NULL
+          INTO @r
+          VALUES (@studentId, @queueItemId, @value, @judgeId);
+
+        SELECT * FROM @r;
       `);
     const row = result.recordset[0];
     return {

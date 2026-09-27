@@ -1,4 +1,5 @@
 import { useT } from "@/lib/i18n";
+import { plainT, type Tr } from "@/lib/i18n/format";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import type {
   PublicQueueItem,
@@ -10,7 +11,7 @@ import type {
 const TZ = "Asia/Bangkok";
 const SLOT_MINUTES = 15;
 /** First-day label of the verification session (matches the printed schedule). */
-export const BOARD_SESSION_LABEL = "การทวนสอบวันแรก";
+export const BOARD_SESSION_LABEL = "day_one_verification";
 
 /** "13:30" — en-GB gives a stable HH:mm regardless of the Thai locale's separator. */
 export function formatBoardTime(iso: string | Date): string {
@@ -31,13 +32,19 @@ export function formatBoardDate(iso: string | Date): string {
   });
 }
 
+
 /** "13:30 - 17:30 น.: การทวนสอบวันแรก (17 พฤษภาคม 2569)" from the first/last slot. */
-export function boardBanner(slots: QueueSlot[]): string | null {
+export function boardBanner(slots: QueueSlot[], t: Tr = plainT): string | null {
   if (slots.length === 0) return null;
   const first = slots[0].startsAt;
   const last = new Date(slots[slots.length - 1].startsAt);
   const end = new Date(last.getTime() + SLOT_MINUTES * 60_000);
-  return `${formatBoardTime(first)} - ${formatBoardTime(end)} น.: ${BOARD_SESSION_LABEL} (${formatBoardDate(first)})`;
+  return t("from_to_label_date", {
+    from: formatBoardTime(first),
+    to: formatBoardTime(end),
+    label: t(BOARD_SESSION_LABEL),
+    date: formatBoardDate(first),
+  });
 }
 
 export interface BoardRow {
@@ -64,6 +71,7 @@ const toCell = (item: PublicQueueItem): QueueSlotCell => ({
  */
 export function buildBoardRows(
   data: Pick<PublicQueueResult, "slots" | "items">,
+  t: Tr = plainT,
 ): BoardRow[] {
   const rows: BoardRow[] = data.slots.map((slot) => {
     const time = formatBoardTime(slot.startsAt);
@@ -84,7 +92,7 @@ export function buildBoardRows(
   for (let i = 0; i < depth; i++) {
     rows.push({
       key: `unscheduled-${i}`,
-      label: `คิวที่ ${i + 1}`,
+      label: t("queue_n", { n: i + 1 }),
       time: null,
       cells: lists.filter((l) => l[i]).map((l) => toCell(l[i])),
     });
@@ -109,12 +117,12 @@ export function QueueBoardTable({
   const t = useT();
   const legend = [
     {
-      label: "รอตรวจ",
+      label: "waiting",
       dot: "bg-yellow-400",
-      hint: "ยังไม่ถึงคิว / รอกรรมการรับ",
+      hint: "not_yet_started_waiting_for_a_judge",
     },
-    { label: "กำลังตรวจ", dot: "bg-blue-500", hint: "กรรมการกำลังตรวจอยู่" },
-    { label: "ตรวจแล้ว", dot: "bg-green-500", hint: "ตรวจเสร็จเรียบร้อย" },
+    { label: "in_progress", dot: "bg-blue-500", hint: "a_judge_is_grading_now" },
+    { label: "done", dot: "bg-green-500", hint: "grading_finished" },
   ];
   return (
     <div>
@@ -137,14 +145,14 @@ export function QueueBoardTable({
               <th className="w-[13%] border border-[var(--qb-line)] bg-[var(--qb-head)] px-1 py-3 text-center text-[14px] font-semibold text-ink-900 sm:w-[19%] sm:px-2 sm:text-[17px]">
                 slot
                 <br />
-                ตั้งต้น
+                {t("start")}
               </th>
               {problemNumbers.map((p) => (
                 <th
                   key={p}
                   className="border border-[var(--qb-line)] bg-[var(--qb-head)] px-1 py-3 text-center text-[14px] font-semibold text-ink-900 sm:px-2 sm:text-[17px]"
                 >
-                  ข้อ {p}
+                  {t("problem_n", { n: p })}
                 </th>
               ))}
             </tr>

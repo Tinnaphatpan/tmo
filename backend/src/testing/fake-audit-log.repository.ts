@@ -1,6 +1,11 @@
 import type { Transaction } from 'mssql';
 import { AuditLogEntry } from '../domain/entities';
-import { AuditLogRepository, CreateAuditLogInput } from '../modules/audit-log/audit-log.repository';
+import {
+  AuditLogContext,
+  AuditLogPageQuery,
+  AuditLogRepository,
+  CreateAuditLogInput,
+} from '../modules/audit-log/audit-log.repository';
 
 export class FakeAuditLogRepository extends AuditLogRepository {
   readonly entries: AuditLogEntry[] = [];
@@ -26,5 +31,22 @@ export class FakeAuditLogRepository extends AuditLogRepository {
 
   async findAllWithContext(): Promise<Array<AuditLogEntry & { performedByDisplayName: string }>> {
     return this.entries.map((e) => ({ ...e, performedByDisplayName: 'x' }));
+  }
+
+  async findPage(
+    query: AuditLogPageQuery,
+  ): Promise<{ items: Array<AuditLogEntry & AuditLogContext>; total: number }> {
+    const matched = this.entries
+      .filter((e) => !query.action || e.action === query.action)
+      .map((e) => ({
+        ...e,
+        performedByDisplayName: 'x',
+        studentName: null,
+        schoolName: null,
+        problemNumber: null,
+        targetUserName: null,
+      }))
+      .filter((e) => !query.search || e.performedByDisplayName.includes(query.search));
+    return { total: matched.length, items: matched.slice(query.offset, query.offset + query.limit) };
   }
 }

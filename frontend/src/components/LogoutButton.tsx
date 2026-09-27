@@ -15,7 +15,7 @@ export function LogoutButton() {
   }
   return (
     <Button variant="ghost" onClick={handleLogout}>
-      {t("ออกจากระบบ")}
+      {t("log_out")}
     </Button>
   );
 }

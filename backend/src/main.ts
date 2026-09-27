@@ -11,7 +11,15 @@ async function bootstrap() {
   // BFF (Next.js) and, for SSE only, the browser directly (SPEC §2.3) both
   // call this API — credentials must be allowed for the SSE case since it
   // connects straight from the browser, not proxied.
-  app.enableCors({ origin: true, credentials: true });
+  // FRONTEND_URL (comma-separated) pins the allowed origins in deployment;
+  // unset keeps the permissive local-dev behaviour.
+  const frontendOrigins = process.env.FRONTEND_URL?.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  app.enableCors({
+    origin: frontendOrigins?.length ? frontendOrigins : true,
+    credentials: true,
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

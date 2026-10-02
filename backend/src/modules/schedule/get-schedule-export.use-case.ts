@@ -11,11 +11,6 @@ function formatTime(d: Date): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/**
- * SPEC §2.5 GET /api/schedule/export, §2.4, §4.3 — public CSV grid matching
- * the wall poster: rows are 15-minute slots, columns are problems 1-5, cells
- * are school codes.
- */
 @Injectable()
 export class GetScheduleExportUseCase {
   constructor(private readonly schoolsRepository: SchoolsRepository) {}

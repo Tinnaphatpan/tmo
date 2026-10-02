@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { FileStorage } from '../../common/file-storage';
 import { UsersRepository } from '../users/users.repository';
 import { SchoolsRepository } from '../schools/schools.repository';
@@ -33,18 +33,21 @@ export class ScoreSheetGenerator {
   async generateAndSave(input: GenerateScoreSheetInput): Promise<string> {
     const submitter = await this.usersRepository.findById(input.submittedByUserId);
     const approver = await this.usersRepository.findById(input.approvedByUserId);
-    if (!submitter?.signaturePath || !approver?.signaturePath) {
-      throw new BadRequestException(
-        'ต้องอัปโหลดลายเซ็นของกรรมการและอาจารย์ผู้ควบคุมทีมก่อนจึงจะอนุมัติได้',
-      );
+    if (!submitter || !approver) {
+      throw new NotFoundException('ไม่พบผู้ส่งคะแนนหรือผู้อนุมัติ');
     }
 
+    // A pre-uploaded signature is optional for every role now — every score
+    // submission and approval is already recorded in AuditLog (who, when,
+    // old/new value), so the PDF stamps whichever signature exists and
+    // prints a text note in its place when one doesn't, rather than
+    // blocking the whole approval on an upload nobody is required to make.
     const [school, students, scores, submitterSignature, approverSignature] = await Promise.all([
       this.schoolsRepository.findById(input.schoolId),
       this.studentsRepository.findBySchool(input.schoolId),
       this.scoresRepository.findByQueueItem(input.queueItemId),
-      this.fileStorage.readFile(submitter.signaturePath),
-      this.fileStorage.readFile(approver.signaturePath),
+      submitter.signaturePath ? this.fileStorage.readFile(submitter.signaturePath) : null,
+      approver.signaturePath ? this.fileStorage.readFile(approver.signaturePath) : null,
     ]);
 
     const pdfBuffer = await buildScoreSheetPdf({

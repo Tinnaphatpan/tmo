@@ -34,7 +34,7 @@ export class ManageQueueUseCase {
     const index = siblings.findIndex((s) => s.id === id);
     const neighbourIndex = direction === 'up' ? index - 1 : index + 1;
     if (neighbourIndex < 0 || neighbourIndex >= siblings.length) {
-      return; // already at the boundary — no-op, not an error
+      return; 
     }
 
     const neighbour = siblings[neighbourIndex];
@@ -44,20 +44,57 @@ export class ManageQueueUseCase {
     await this.queueRepository.updatePosition(neighbour.id, itemPosition);
   }
 
-  /** Edits one item's exam time (Bangkok local, no DST); Position is unchanged. Only WAITING items. */
-  async setScheduledTime(id: string, date: string, time: string): Promise<void> {
+  /**
+   * Full admin edit — school, problem and exam time together (Bangkok
+   * local, no DST), per the queue-management flow diagram: fetch the item,
+   * show it pre-filled, let the admin change anything, validate, save.
+   * Only WAITING items (editing a claimed/finished item would falsify the
+   * record — same restriction as the old time-only edit and as Skip Queue).
+   * Moving an item to a different problem appends it to that problem's
+   * queue (same placement `create` uses); staying on the same problem keeps
+   * its existing Position (only the school/time changed).
+   */
+  async update(
+    id: string,
+    input: { schoolId: string; problemNumber: number; date: string; time: string },
+  ): Promise<QueueItem> {
     const item = await this.queueRepository.findById(id);
     if (!item) {
       throw new NotFoundException('ไม่พบรายการคิวนี้');
     }
     if (item.status !== 'WAITING') {
-      throw new ConflictException('แก้เวลาได้เฉพาะรายการที่ยังรอตรวจ');
+      throw new ConflictException('แก้ไขได้เฉพาะรายการที่ยังรอตรวจ');
     }
-    const scheduledAt = new Date(`${date}T${time}:00+07:00`);
+
+    const scheduledAt = new Date(`${input.date}T${input.time}:00+07:00`);
     if (Number.isNaN(scheduledAt.getTime())) {
       throw new BadRequestException('รูปแบบวันที่หรือเวลาไม่ถูกต้อง');
     }
-    await this.queueRepository.updateSchedule(id, item.position, scheduledAt);
+
+    const cellChanged = item.schoolId !== input.schoolId || item.problemNumber !== input.problemNumber;
+    if (cellChanged) {
+      const duplicate = await this.queueRepository.existsForSchoolAndProblem(
+        input.schoolId,
+        input.problemNumber,
+      );
+      if (duplicate) {
+        throw new ConflictException('ศูนย์นี้มีข้อนี้ในคิวแล้ว');
+      }
+    }
+
+    const position =
+      item.problemNumber !== input.problemNumber
+        ? (await this.queueRepository.findByProblemNumbersWithSchool([input.problemNumber])).length
+        : item.position;
+
+    await this.queueRepository.updateDetails(id, {
+      schoolId: input.schoolId,
+      problemNumber: input.problemNumber,
+      position,
+      scheduledAt,
+    });
+
+    return { ...item, schoolId: input.schoolId, problemNumber: input.problemNumber, position, scheduledAt };
   }
 
   async remove(id: string): Promise<void> {

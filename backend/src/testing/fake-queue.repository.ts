@@ -104,6 +104,12 @@ export class FakeQueueRepository extends QueueRepository {
       .map((i) => ({ ...i, schoolName: 'x', schoolCode: null }));
   }
 
+  async findAllPendingApproval(): Promise<QueueItemWithSchool[]> {
+    return this.items
+      .filter((i) => i.approvalStatus === 'PENDING')
+      .map((i) => ({ ...i, schoolName: 'x', schoolCode: null }));
+  }
+
   async create(input: {
     schoolId: string;
     problemNumber: number;
@@ -140,6 +146,19 @@ export class FakeQueueRepository extends QueueRepository {
     if (item) {
       item.position = position;
       item.scheduledAt = scheduledAt;
+    }
+  }
+
+  async updateDetails(
+    id: string,
+    input: { schoolId: string; problemNumber: number; position: number; scheduledAt: Date },
+  ): Promise<void> {
+    const item = this.items.find((i) => i.id === id);
+    if (item) {
+      item.schoolId = input.schoolId;
+      item.problemNumber = input.problemNumber;
+      item.position = input.position;
+      item.scheduledAt = input.scheduledAt;
     }
   }
 

@@ -49,10 +49,12 @@ describe('QueueController (HTTP)', () => {
       await http().post('/queue/q1/skip').expect(401);
     });
 
-    it('403 for ADMIN and TEAM_LEADER (not examiner roles)', async () => {
-      for (const role of ['ADMIN', 'TEAM_LEADER'] as const) {
-        await http().post('/queue/q1/skip').set('Authorization', api.login({ role })).expect(403);
-      }
+    it('403 for TEAM_LEADER (not an examiner role)', async () => {
+      await http().post('/queue/q1/skip').set('Authorization', api.login({ role: 'TEAM_LEADER' })).expect(403);
+    });
+
+    it('ADMIN passes the role gate too (RolesGuard) — 404 here only because q1 isn’t seeded', async () => {
+      await http().post('/queue/q1/skip').set('Authorization', api.login({ role: 'ADMIN' })).expect(404);
     });
 
     it('200: STAFF skips the item they hold -> WAITING at the end of the problem queue', async () => {
@@ -102,6 +104,14 @@ describe('QueueController (HTTP)', () => {
       await http().post('/queue/other-school/claim').set('Authorization', auth).expect(403);
       await http().post('/queue/in-scope/claim').set('Authorization', auth).expect(200);
       expect((await queueRepo.findById('in-scope'))?.claimedByUserId).toBe('staff-1');
+    });
+
+    it('ADMIN can claim outside any UserAssignment scope (no scope seeded at all)', async () => {
+      const auth = api.login({ id: 'admin-1', role: 'ADMIN' });
+      queueRepo.seed(makeQueueItem({ id: 'admin-claim', problemNumber: 3, schoolId: 'school-1' }));
+
+      await http().post('/queue/admin-claim/claim').set('Authorization', auth).expect(200);
+      expect((await queueRepo.findById('admin-claim'))?.claimedByUserId).toBe('admin-1');
     });
   });
 

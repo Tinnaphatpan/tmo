@@ -62,27 +62,30 @@ export class QueueController {
 
   @Get('mine')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('COMMITTEE', 'STAFF')
+  @Roles('COMMITTEE', 'STAFF', 'ADMIN')
   getMine(@CurrentUser() user: User): Promise<MyQueueResult> {
-    return this.getMyQueue.execute(user.id);
+    return this.getMyQueue.execute(user.id, user.role === 'ADMIN');
   }
 
+  // ADMIN may also claim/grade directly (e.g. covering when nobody else is
+  // available) — bypasses the UserAssignment scope check COMMITTEE/STAFF are
+  // held to, see ClaimQueueItemUseCase's `isAdmin` param.
   @Post(':id/claim')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('COMMITTEE', 'STAFF')
+  @Roles('COMMITTEE', 'STAFF', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async claim(
     @CurrentUser() user: User,
     @Param('id') id: string,
   ): Promise<{ ok: true }> {
-    await this.claimQueueItem.execute(user.id, id);
+    await this.claimQueueItem.execute(user.id, id, user.role === 'ADMIN');
     this.realtimeService.notifyChange();
     return { ok: true };
   }
 
   @Post(':id/score')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('COMMITTEE', 'STAFF')
+  @Roles('COMMITTEE', 'STAFF', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async score(
     @CurrentUser() user: User,
@@ -97,7 +100,7 @@ export class QueueController {
   // Release + move to the end of this problem's queue (Phase B5).
   @Post(':id/skip')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('COMMITTEE', 'STAFF')
+  @Roles('COMMITTEE', 'STAFF', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async skip(
     @CurrentUser() user: User,

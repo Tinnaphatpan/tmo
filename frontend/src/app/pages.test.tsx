@@ -264,6 +264,7 @@ describe("AdminPermissionsPage (F4)", () => {
     await userEvent.type(screen.getByPlaceholderText("รหัสผ่าน (≥8 ตัว)"), "password123");
     expect(create).toBeEnabled();
     await userEvent.click(create);
+    await userEvent.click(screen.getByRole("button", { name: "ยืนยัน" }));
 
     expect(post).toHaveBeenCalledWith("/admin/committee", {
       username: "new1",
@@ -271,6 +272,7 @@ describe("AdminPermissionsPage (F4)", () => {
       password: "password123",
       problemNumbers: [3],
     });
+    expect(await screen.findByText("สร้างบัญชีสำเร็จ")).toBeInTheDocument();
   });
 
   it("creates a STAFF user with (problem, school) rows sent as assignments", async () => {
@@ -286,6 +288,7 @@ describe("AdminPermissionsPage (F4)", () => {
     await userEvent.selectOptions(selects[0], "4");
     await userEvent.selectOptions(selects[1], "sch-1");
     await userEvent.click(screen.getByRole("button", { name: "สร้างบัญชี" }));
+    await userEvent.click(screen.getByRole("button", { name: "ยืนยัน" }));
 
     expect(post).toHaveBeenCalledWith("/admin/staff", {
       username: "st2",
@@ -295,7 +298,7 @@ describe("AdminPermissionsPage (F4)", () => {
     });
   });
 
-  it("edits a STAFF scope via PATCH /admin/staff and deletes after confirmation", async () => {
+  it("edits a STAFF scope via PATCH /admin/staff (after a confirm dialog) and deletes via a themed confirm dialog", async () => {
     patch.mockResolvedValue({});
     del.mockResolvedValue({});
     render(<AdminPermissionsPage />);
@@ -303,18 +306,23 @@ describe("AdminPermissionsPage (F4)", () => {
     await userEvent.click(await screen.findByRole("button", { name: "แก้ไข" }));
     await userEvent.selectOptions(screen.getAllByRole("combobox")[1], ""); // -> all schools
     await userEvent.click(screen.getByRole("button", { name: "บันทึก" }));
+    await userEvent.click(screen.getByRole("button", { name: "ยืนยัน" }));
     expect(patch).toHaveBeenCalledWith("/admin/staff", {
       id: "s1",
       assignments: [{ problemNumber: 2, schoolId: null }],
       password: undefined,
     });
+    expect(await screen.findByText("แก้ไขบัญชีสำเร็จ")).toBeInTheDocument();
 
-    const confirm = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const confirmSpy = vi.spyOn(window, "confirm");
     await userEvent.click(await screen.findByRole("button", { name: "ลบ" }));
+    expect(confirmSpy).not.toHaveBeenCalled(); // themed modal now, not window.confirm
+    await userEvent.click(screen.getByRole("button", { name: "ยกเลิก" }));
     expect(del).not.toHaveBeenCalled(); // cancelled
+
     await userEvent.click(screen.getByRole("button", { name: "ลบ" }));
+    await userEvent.click(screen.getByRole("button", { name: "ยืนยัน" }));
     expect(del).toHaveBeenCalledWith("/admin/staff", { params: { id: "s1" } });
-    confirm.mockRestore();
   });
 
   it("uploads a signature as multipart to /admin/users/:id/signature", async () => {
@@ -341,6 +349,7 @@ describe("AdminPermissionsPage (F4)", () => {
     await userEvent.type(screen.getByPlaceholderText("รหัสผ่าน (≥8 ตัว)"), "password123");
     await userEvent.click(screen.getByRole("button", { name: "1" }));
     await userEvent.click(screen.getByRole("button", { name: "สร้างบัญชี" }));
+    await userEvent.click(screen.getByRole("button", { name: "ยืนยัน" }));
     expect(await screen.findByText("ชื่อผู้ใช้นี้มีอยู่แล้ว")).toBeInTheDocument();
   });
 });

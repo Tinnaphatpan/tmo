@@ -5,7 +5,6 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { ManageTeamLeaderUseCase } from './use-cases/manage-team-leader.use-case';
 import { CreateTeamLeaderDto, UpdateTeamLeaderDto } from './dto/team-leader.dto';
 
-// Admin CRUD for TEAM_LEADER accounts (listing is part of GET /admin/permissions).
 @Controller('admin/team-leaders')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')

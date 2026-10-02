@@ -19,7 +19,15 @@ export class MoveQueueItemDto {
   direction!: 'up' | 'down';
 }
 
-export class SetQueueTimeDto {
+export class UpdateQueueItemDto {
+  @IsUUID()
+  schoolId!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  problemNumber!: number;
+
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'วันที่ต้องอยู่ในรูปแบบ YYYY-MM-DD' })
   date!: string;
 

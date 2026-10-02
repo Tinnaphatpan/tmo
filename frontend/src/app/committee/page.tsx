@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCheck } from "@/components/ui/icons";
+import { ClipboardCheck, FilePenLine } from "@/components/ui/icons";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
@@ -259,32 +259,27 @@ export default function CommitteePage() {
               {t("nothing_graded_yet")}
             </p>
           ) : (
-            <ul className="divide-y divide-line">
+            <ul className="space-y-4">
               {done.map((item) => {
                 const total = item.scores.reduce((sum, s) => sum + s.value, 0);
                 const flagged = item.scores.some((s) => pendingScoreIds.has(s.id));
                 return (
                   <li
                     key={item.id}
-                    className={`py-3 ${flagged ? "-mx-2 rounded-lg bg-red-50 px-2 shadow-[inset_6px_0_0_#c8102e] pl-4" : ""}`}
+                    className={`rounded-xl border p-4 ${flagged ? "border-[#c8102e]" : "border-line"}`}
                   >
-                    {flagged && (
-                      <p className="mb-1 text-xs font-semibold text-[#c8102e]">⚠ {t("edit_requested")}</p>
-                    )}
-                    <div className="mb-2 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-ink-900">
-                          <span className="inline-flex items-center gap-2">
-                            <SchoolLogo code={item.school.code} size={28} />
-                            {item.school.name}
-                          </span>
-                        </p>
-                        <p className="text-sm text-ink-500">
-                          {t("problem_n_total_total", {
-                            n: item.problemNumber,
-                            total: total.toFixed(2),
-                          })}
-                        </p>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <SchoolLogo code={item.school.code} size={32} />
+                        <div>
+                          <p className="font-semibold text-ink-900">{item.school.name}</p>
+                          <p className="text-xs text-ink-500">
+                            {t("problem_n_total_total", {
+                              n: item.problemNumber,
+                              total: total.toFixed(2),
+                            })}
+                          </p>
+                        </div>
                       </div>
                       <StatusBadge
                         status={
@@ -294,27 +289,75 @@ export default function CommitteePage() {
                         }
                       />
                     </div>
-                    {data.scoringLocked && (
-                      <div className="flex flex-wrap gap-2">
-                        {item.school.students.map((student) => {
-                          const score = item.scores.find(
-                            (s) => s.studentId === student.id,
-                          );
-                          if (!score) return null;
-                          return (
-                            <button
-                              key={student.id}
-                              onClick={() =>
-                                setEditModal({ item, studentId: student.id })
-                              }
-                              className="touch-target rounded-lg border border-line bg-surface-sunken px-2 py-1 text-xs text-ink-700 hover:border-saed-400"
-                            >
-                              {student.studentCode}: {score.value.toFixed(2)}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    {flagged && (
+                      <p className="mb-2 text-xs font-semibold text-[#c8102e]">
+                        ⚠ {t("edit_requested")}
+                      </p>
                     )}
+                    {/* Requesting a correction never needs scoring to be
+                        locked first — SPEC's post-lock-only UI was there
+                        because locking was the only trigger anyone had in
+                        mind, not a backend restriction (CreateScoreEditRequestUseCase
+                        never checks scoringLocked); a judge should be able to
+                        flag their own mistake the moment they notice it. */}
+                    {/* No school code/logo column here — the card header
+                        above already identifies the school, so each row only
+                        needs to identify the student within it. */}
+                    <div className="table-frame overflow-x-auto">
+                      <table className="w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="bg-ink-900 text-white">
+                            <th className="border border-line px-3 py-1.5 text-left">{t("examinee")}</th>
+                            <th className="border border-line px-3 py-1.5 text-center">{t("recorded_score")}</th>
+                            <th className="border border-line px-3 py-1.5 text-center">{t("status")}</th>
+                            <th className="border border-line px-3 py-1.5 text-center">{t("action")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {item.school.students.map((student) => {
+                            const score = item.scores.find(
+                              (s) => s.studentId === student.id,
+                            );
+                            if (!score) return null;
+                            const pending = pendingScoreIds.has(score.id);
+                            return (
+                              <tr
+                                key={student.id}
+                                className={pending ? "bg-red-50" : "odd:bg-white even:bg-surface-sunken/60"}
+                              >
+                                <td className="border border-line px-3 py-1.5 text-ink-900">
+                                  {student.name}
+                                </td>
+                                <td className="border border-line px-3 py-1.5 text-center font-semibold text-ink-900">
+                                  {score.value.toFixed(2)}
+                                </td>
+                                <td className="border border-line px-3 py-1.5 text-center">
+                                  {pending ? (
+                                    <span className="inline-block rounded-full bg-[#c8102e] px-2 py-0.5 text-xs font-medium text-white">
+                                      {t("edit_requested")}
+                                    </span>
+                                  ) : (
+                                    <span className="text-ink-500">{t("saved_status")}</span>
+                                  )}
+                                </td>
+                                <td className="border border-line px-3 py-1.5 text-center">
+                                  <button
+                                    disabled={pending}
+                                    onClick={() =>
+                                      setEditModal({ item, studentId: student.id })
+                                    }
+                                    className="inline-flex items-center gap-1 font-medium text-saed-600 hover:text-saed-700 hover:underline disabled:cursor-not-allowed disabled:text-ink-300 disabled:no-underline"
+                                  >
+                                    <FilePenLine className="h-4 w-4" aria-hidden />
+                                    {t("edit_score")}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </li>
                 );
               })}

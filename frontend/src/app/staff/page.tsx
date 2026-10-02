@@ -14,7 +14,11 @@ import { ScoreForm } from "@/components/ScoreForm";
 import { useT } from "@/lib/i18n";
 /** Staff queue management: Call Next / Skip / Mark Complete (ScoreForm) within
  * the caller's UserAssignment scope — scoping itself is enforced server-side,
- * `/queue/mine` already returns only in-scope items. */
+ * `/queue/mine` already returns only in-scope items. An ADMIN lands here too
+ * (see staff/layout.tsx), but picks a *specific* item from the admin/queue
+ * page's own table (school/problem/time/รับ button) rather than here — this
+ * page is just where the actual grading (ScoreForm) happens once something
+ * is claimed, same for every role. */
 export default function StaffPage() {
   const t = useT();
   const [data, setData] = useState<MyQueueResult | null>(null);

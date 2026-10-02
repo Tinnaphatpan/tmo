@@ -47,15 +47,23 @@ export class GetMyQueueUseCase {
     private readonly scoresRepository: ScoresRepository,
   ) {}
 
-  async execute(userId: string): Promise<MyQueueResult> {
+  /** `isAdmin` skips the UserAssignment scope filter entirely — an ADMIN
+   * isn't assigned specific problem numbers, but may claim/grade any item,
+   * so they see every problem/school here rather than an empty list. */
+  async execute(userId: string, isAdmin = false): Promise<MyQueueResult> {
     const scope = await this.userAssignmentRepository.findScopeByUser(userId);
-    const problemNumbers = [...new Set(scope.map((s) => s.problemNumber))].sort((a, b) => a - b);
-    const candidateItems = await this.queueRepository.findByProblemNumbersWithSchool(problemNumbers);
-    const baseItems = candidateItems.filter((item) =>
-      scope.some(
-        (s) => s.problemNumber === item.problemNumber && (s.schoolId === null || s.schoolId === item.schoolId),
-      ),
-    );
+    const baseItems = isAdmin
+      ? await this.queueRepository.findAllWithSchool()
+      : (
+          await this.queueRepository.findByProblemNumbersWithSchool(
+            [...new Set(scope.map((s) => s.problemNumber))].sort((a, b) => a - b),
+          )
+        ).filter((item) =>
+          scope.some(
+            (s) => s.problemNumber === item.problemNumber && (s.schoolId === null || s.schoolId === item.schoolId),
+          ),
+        );
+    const problemNumbers = [...new Set(baseItems.map((i) => i.problemNumber))].sort((a, b) => a - b);
     const settings = await this.settingsRepository.get();
 
     // Two batched reads instead of one query per item / per school.

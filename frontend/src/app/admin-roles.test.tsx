@@ -57,7 +57,7 @@ describe("Team leader management (create / edit / delete)", () => {
     expect(create).toBeEnabled();
   });
 
-  it("creates via POST /admin/team-leaders with schoolId", async () => {
+  it("creates via POST /admin/team-leaders with schoolId, after a confirm dialog and showing a success message", async () => {
     post.mockResolvedValue({});
     render(<AdminPermissionsPage />);
     await openTab("หัวหน้าทีม");
@@ -68,15 +68,19 @@ describe("Team leader management (create / edit / delete)", () => {
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "ศูนย์สอบ" }), "sch-b");
     await userEvent.click(screen.getByRole("button", { name: "สร้างบัญชี" }));
 
+    expect(post).not.toHaveBeenCalled(); // gated behind the confirm dialog
+    await userEvent.click(screen.getByRole("button", { name: "ยืนยัน" }));
+
     expect(post).toHaveBeenCalledWith("/admin/team-leaders", {
       username: "tl2",
       displayName: "หัวหน้า 2",
       password: "password123",
       schoolId: "sch-b",
     });
+    expect(await screen.findByText("สร้างบัญชีสำเร็จ")).toBeInTheDocument();
   });
 
-  it("edit re-homes to another school via PATCH /admin/team-leaders", async () => {
+  it("edit re-homes to another school via PATCH /admin/team-leaders, after a confirm dialog and showing a success message", async () => {
     patch.mockResolvedValue({});
     render(<AdminPermissionsPage />);
     await openTab("หัวหน้าทีม");
@@ -84,22 +88,31 @@ describe("Team leader management (create / edit / delete)", () => {
     const row = screen.getByText("หัวหน้า 1").closest("div.p-3") as HTMLElement;
     await userEvent.selectOptions(within(row).getByRole("combobox", { name: "ศูนย์สอบ" }), "sch-b");
     await userEvent.click(within(row).getByRole("button", { name: "บันทึก" }));
+
+    expect(patch).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "ยืนยัน" }));
+
     expect(patch).toHaveBeenCalledWith("/admin/team-leaders", {
       id: "t1",
       schoolId: "sch-b",
       password: undefined,
     });
+    expect(await screen.findByText("แก้ไขบัญชีสำเร็จ")).toBeInTheDocument();
   });
 
-  it("delete goes to /admin/team-leaders after confirmation and shows a backend refusal", async () => {
+  it("delete goes to /admin/team-leaders after a themed confirm dialog (not window.confirm) and shows a backend refusal", async () => {
     del.mockRejectedValueOnce(apiError("มีประวัติการอนุมัติอยู่"));
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm");
     render(<AdminPermissionsPage />);
     await openTab("หัวหน้าทีม");
     await userEvent.click(await screen.findByRole("button", { name: "ลบ" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(del).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "ยืนยัน" }));
+
     expect(del).toHaveBeenCalledWith("/admin/team-leaders", { params: { id: "t1" } });
     expect(await screen.findByText("มีประวัติการอนุมัติอยู่")).toBeInTheDocument();
-    confirm.mockRestore();
   });
 });
 

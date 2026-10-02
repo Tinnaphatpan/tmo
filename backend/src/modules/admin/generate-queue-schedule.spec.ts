@@ -14,6 +14,9 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { SCHEDULE_SCHOOL_ORDER, sortSchoolsForSchedule } from '../queue/schedule-order';
 import { GenerateQueueScheduleUseCase } from './use-cases/generate-queue-schedule.use-case';
 import { ManageQueueUseCase } from './use-cases/manage-queue.use-case';
+import { ResetQueueUseCase } from './use-cases/reset-queue.use-case';
+import { ResetQueueRepository } from './reset-queue.repository';
+import { FakeResetQueueRepository } from '../../testing/fake-reset-queue.repository';
 import { AdminQueueController } from './admin-queue.controller';
 
 const seedSchools = (repo: FakeSchoolsRepository, codes: readonly string[]) =>
@@ -157,8 +160,10 @@ describe('POST /admin/queue/generate (HTTP)', () => {
         { provide: AuditLogRepository, useValue: new FakeAuditLogRepository() },
         { provide: TransactionRunner, useValue: new FakeTransactionRunner() },
         { provide: RealtimeService, useValue: { notifyChange, stream: EMPTY } },
+        { provide: ResetQueueRepository, useValue: new FakeResetQueueRepository() },
         GenerateQueueScheduleUseCase,
         ManageQueueUseCase,
+        ResetQueueUseCase,
       ],
     });
   });

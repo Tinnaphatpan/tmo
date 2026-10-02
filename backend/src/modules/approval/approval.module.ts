@@ -12,6 +12,6 @@ import { ScoreSheetGenerator } from './score-sheet-generator';
   imports: [AuthModule, QueueModule, SchoolsModule, StudentsModule, ScoresDataModule],
   controllers: [ApprovalController],
   providers: [ApproveScoreSetUseCase, ScoreSheetGenerator],
-  exports: [ScoreSheetGenerator],
+  exports: [ScoreSheetGenerator, ApproveScoreSetUseCase],
 })
 export class ApprovalModule {}

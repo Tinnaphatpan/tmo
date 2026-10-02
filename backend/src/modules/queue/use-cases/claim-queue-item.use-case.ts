@@ -26,18 +26,23 @@ export class ClaimQueueItemUseCase {
     private readonly userAssignmentRepository: UserAssignmentRepository,
   ) {}
 
-  async execute(userId: string, queueItemId: string): Promise<void> {
+  /** `isAdmin` skips the UserAssignment scope check — an ADMIN isn't assigned
+   * a problem number the way COMMITTEE/STAFF are, but may claim/grade any
+   * item directly (e.g. covering when nobody else is available). */
+  async execute(userId: string, queueItemId: string, isAdmin = false): Promise<void> {
     const item = await this.queueRepository.findById(queueItemId);
     if (!item) {
       throw new NotFoundException('ไม่พบรายการคิวนี้');
     }
 
-    const scope = await this.userAssignmentRepository.findScopeByUser(userId);
-    const isAssigned = scope.some(
-      (s) => s.problemNumber === item.problemNumber && (s.schoolId === null || s.schoolId === item.schoolId),
-    );
-    if (!isAssigned) {
-      throw new ForbiddenException('คุณไม่ได้รับมอบหมายให้ตรวจข้อนี้');
+    if (!isAdmin) {
+      const scope = await this.userAssignmentRepository.findScopeByUser(userId);
+      const isAssigned = scope.some(
+        (s) => s.problemNumber === item.problemNumber && (s.schoolId === null || s.schoolId === item.schoolId),
+      );
+      if (!isAssigned) {
+        throw new ForbiddenException('คุณไม่ได้รับมอบหมายให้ตรวจข้อนี้');
+      }
     }
 
     const activeClaim = await this.queueRepository.findActiveClaimByUser(userId);

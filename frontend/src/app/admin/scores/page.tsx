@@ -16,19 +16,52 @@ interface ScoreExportRow {
   judgeDisplayName: string;
   judgeUsername: string;
   recordedAt: string;
+  /** Only present when the row can be targeted for a direct edit (every row
+   * from GET /admin/scores has one — undefined only guards a shape change). */
+  scoreId?: string;
 }
 
 export default function AdminScoresPage() {
   const t = useT();
   const [rows, setRows] = useState<ScoreExportRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
 
-  useEffect(() => {
+  function load() {
     api
       .get<ScoreExportRow[]>("/admin/scores")
       .then(({ data }) => setRows(data))
       .catch((err) => setError(getApiErrorMessage(err, t("failed_to_load_data"))));
+  }
+
+  useEffect(() => {
+    load();
   }, []);
+
+  function startEdit(row: ScoreExportRow) {
+    if (!row.scoreId) return;
+    setRowError(null);
+    setEditingId(row.scoreId);
+    setEditValue(String(row.value));
+  }
+
+  async function saveEdit(scoreId: string) {
+    const value = Number(editValue);
+    setSaving(true);
+    setRowError(null);
+    try {
+      await api.patch(`/admin/scores/${scoreId}`, { value });
+      setEditingId(null);
+      load();
+    } catch (err) {
+      setRowError({ id: scoreId, message: getApiErrorMessage(err, t("failed_to_save")) });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -45,6 +78,7 @@ export default function AdminScoresPage() {
       </div>
 
       {error && <p className="text-sm text-state-active-fg">{error}</p>}
+      <p className="text-xs text-ink-500">{t("admin_score_edit_note")}</p>
 
       <div className="card-soft overflow-x-auto p-2">
         <table className="w-full text-sm">
@@ -60,19 +94,59 @@ export default function AdminScoresPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {rows.map((row, i) => (
-              <tr key={i}>
-                <td className="px-3 py-2 text-ink-900">{row.schoolName}</td>
-                <td className="px-3 py-2 text-ink-700">{row.studentCode}</td>
-                <td className="px-3 py-2 text-ink-700">{row.studentName}</td>
-                <td className="px-3 py-2 text-ink-700">{row.problemNumber}</td>
-                <td className="px-3 py-2 text-ink-900">{row.value.toFixed(2)}</td>
-                <td className="px-3 py-2 text-ink-700">{row.judgeDisplayName}</td>
-                <td className="px-3 py-2 text-ink-500">
-                  {new Date(row.recordedAt).toLocaleString("th-TH")}
-                </td>
-              </tr>
-            ))}
+            {rows.map((row, i) => {
+              const editing = row.scoreId && editingId === row.scoreId;
+              return (
+                <tr key={i}>
+                  <td className="px-3 py-2 text-ink-900">{row.schoolName}</td>
+                  <td className="px-3 py-2 text-ink-700">{row.studentCode}</td>
+                  <td className="px-3 py-2 text-ink-700">{row.studentName}</td>
+                  <td className="px-3 py-2 text-ink-700">{row.problemNumber}</td>
+                  <td className="px-3 py-2 text-ink-900">
+                    {editing ? (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min={0}
+                            max={10}
+                            step={0.5}
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            className="w-20 rounded-lg border border-line bg-surface px-2 py-1 text-ink-900"
+                          />
+                          <Button
+                            disabled={saving}
+                            onClick={() => row.scoreId && saveEdit(row.scoreId)}
+                          >
+                            {saving ? t("saving") : t("save")}
+                          </Button>
+                          <Button variant="ghost" disabled={saving} onClick={() => setEditingId(null)}>
+                            {t("cancel")}
+                          </Button>
+                        </div>
+                        {rowError && rowError.id === row.scoreId && (
+                          <p className="text-xs text-state-active-fg">{rowError.message}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        disabled={!row.scoreId}
+                        onClick={() => startEdit(row)}
+                        className="touch-target rounded-lg border border-transparent px-1.5 py-0.5 font-medium hover:border-saed-400 disabled:cursor-not-allowed"
+                        title={row.scoreId ? t("edit") : undefined}
+                      >
+                        {row.value.toFixed(2)}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-ink-700">{row.judgeDisplayName}</td>
+                  <td className="px-3 py-2 text-ink-500">
+                    {new Date(row.recordedAt).toLocaleString("th-TH")}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

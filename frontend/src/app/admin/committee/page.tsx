@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { SchoolRef } from "@/lib/types";
 
 import { useT } from "@/lib/i18n";
@@ -236,12 +237,20 @@ export default function AdminPermissionsPage() {
   const [schools, setSchools] = useState<SchoolRef[]>([]);
   const [tab, setTab] = useState<Role>("COMMITTEE");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    danger?: boolean;
+    errorFallback?: string;
+    run: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [newScope, setNewScope] = useState<Scope>(EMPTY_SCOPE);
-  const [creating, setCreating] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editScope, setEditScope] = useState<Scope>(EMPTY_SCOPE);
@@ -276,57 +285,96 @@ export default function AdminPermissionsPage() {
     setError(null);
   }
 
-  async function handleCreate() {
+  // Validate -> confirm -> save -> success message, per the user-management
+  // flow diagram ("ตรวจสอบความถูกต้องของข้อมูล" -> "ยืนยันการบันทึกข้อมูล").
+  function handleCreateClick() {
     setError(null);
-    setCreating(true);
+    setNotice(null);
+    if (!canSubmit) {
+      setError(t("please_fill_in_all_required_fields"));
+      return;
+    }
+    setConfirmAction({
+      title: t("confirm_create_account"),
+      message: t("confirm_create_account_message", { role: t(ROLE_LABELS[tab]), username, name: displayName }),
+      errorFallback: t("failed_to_create_the_account"),
+      run: async () => {
+        await api.post(endpoint(tab), {
+          username,
+          displayName,
+          password,
+          ...scopeBody(tab, newScope),
+        });
+        setUsername("");
+        setDisplayName("");
+        setPassword("");
+        setNewScope(EMPTY_SCOPE);
+        await load();
+        setNotice(t("account_created_successfully"));
+      },
+    });
+  }
+
+  function handleSaveEditClick(row: MatrixRow) {
+    setError(null);
+    setNotice(null);
+    if (scopeIsEmpty(row.role, editScope)) {
+      setError(t("please_assign_at_least_one_permission"));
+      return;
+    }
+    setConfirmAction({
+      title: t("confirm_edit_account"),
+      message: editPassword
+        ? t("confirm_edit_account_message_with_password", { name: row.displayName })
+        : t("confirm_edit_account_message", { name: row.displayName }),
+      errorFallback: t("failed_to_save"),
+      run: async () => {
+        await api.patch(endpoint(row.role), {
+          id: row.id,
+          ...scopeBody(row.role, editScope),
+          password: editPassword || undefined,
+        });
+        setEditingId(null);
+        await load();
+        setNotice(t("account_edited_successfully"));
+      },
+    });
+  }
+
+  function handleDeleteClick(row: MatrixRow) {
+    setError(null);
+    setNotice(null);
+    setConfirmAction({
+      title: t("delete_this_account"),
+      message: t("confirm_delete_account_message", { name: row.displayName }),
+      danger: true,
+      errorFallback: t("failed_to_delete"),
+      run: async () => {
+        await api.delete(endpoint(row.role), { params: { id: row.id } });
+        await load();
+        setNotice(t("account_deleted_successfully"));
+      },
+    });
+  }
+
+  async function handleConfirmYes() {
+    if (!confirmAction) return;
+    setConfirmBusy(true);
     try {
-      await api.post(endpoint(tab), {
-        username,
-        displayName,
-        password,
-        ...scopeBody(tab, newScope),
-      });
-      setUsername("");
-      setDisplayName("");
-      setPassword("");
-      setNewScope(EMPTY_SCOPE);
-      await load();
+      await confirmAction.run();
+      setConfirmAction(null);
     } catch (err) {
-      setError(getApiErrorMessage(err, t("failed_to_create_the_account")));
+      setError(getApiErrorMessage(err, confirmAction.errorFallback ?? t("action_failed")));
+      setConfirmAction(null);
     } finally {
-      setCreating(false);
-    }
-  }
-
-  async function handleSaveEdit(row: MatrixRow) {
-    setError(null);
-    try {
-      await api.patch(endpoint(row.role), {
-        id: row.id,
-        ...scopeBody(row.role, editScope),
-        password: editPassword || undefined,
-      });
-      setEditingId(null);
-      await load();
-    } catch (err) {
-      setError(getApiErrorMessage(err, t("failed_to_save")));
-    }
-  }
-
-  async function handleDelete(row: MatrixRow) {
-    if (!window.confirm(t("delete_this_account"))) return;
-    setError(null);
-    try {
-      await api.delete(endpoint(row.role), { params: { id: row.id } });
-      await load();
-    } catch (err) {
-      setError(getApiErrorMessage(err, t("failed_to_delete")));
+      setConfirmBusy(false);
     }
   }
 
   async function handleChangeRole() {
     if (!roleChange) return;
     setError(null);
+    setNotice(null);
     const { id, role, scope } = roleChange;
     try {
       await api.patch(`/admin/users/${id}/role`, {
@@ -338,6 +386,7 @@ export default function AdminPermissionsPage() {
       setRoleChange(null);
       setTab(role); // follow the user to their new role's tab
       await load();
+      setNotice(t("role_changed_successfully"));
     } catch (err) {
       setError(getApiErrorMessage(err, t("failed_to_change_the_role")));
     }
@@ -360,12 +409,7 @@ export default function AdminPermissionsPage() {
   }
 
   const visible = rows.filter((r) => r.role === tab);
-  const canSubmit =
-    !creating &&
-    username &&
-    displayName &&
-    password.length >= 8 &&
-    !scopeIsEmpty(tab, newScope);
+  const canSubmit = !!username && !!displayName && password.length >= 8 && !scopeIsEmpty(tab, newScope);
 
   return (
     <div className="space-y-6">
@@ -387,6 +431,9 @@ export default function AdminPermissionsPage() {
       </div>
 
       {error && <p className="text-sm text-state-active-fg">{error}</p>}
+      {notice && (
+        <p className="rounded-lg bg-state-done-bg px-3 py-2 text-sm text-state-done-fg">{notice}</p>
+      )}
 
       <div className="card-soft space-y-3 p-4">
         <h3 className="font-semibold text-ink-900">{t("create_a_new_role_account", { role: t(ROLE_LABELS[tab]) })}</h3>
@@ -417,7 +464,7 @@ export default function AdminPermissionsPage() {
           </span>
           <ScopeEditor role={tab} value={newScope} schools={schools} onChange={setNewScope} />
         </div>
-        <Button onClick={handleCreate} disabled={!canSubmit}>
+        <Button onClick={handleCreateClick} disabled={!canSubmit}>
           {t("create_account")}
         </Button>
       </div>
@@ -459,7 +506,7 @@ export default function AdminPermissionsPage() {
                 </label>
                 {editingId === row.id ? (
                   <>
-                    <Button variant="secondary" onClick={() => handleSaveEdit(row)}>
+                    <Button variant="secondary" onClick={() => handleSaveEditClick(row)}>
                       {t("save")}
                     </Button>
                     <Button variant="ghost" onClick={() => setEditingId(null)}>
@@ -492,7 +539,7 @@ export default function AdminPermissionsPage() {
                     >
                       {t("change_role")}
                     </Button>
-                    <Button variant="danger" onClick={() => handleDelete(row)}>
+                    <Button variant="danger" onClick={() => handleDeleteClick(row)}>
                       {t("delete")}
                     </Button>
                   </>
@@ -571,6 +618,17 @@ export default function AdminPermissionsPage() {
           </div>
         ))}
       </div>
+
+      {confirmAction && (
+        <ConfirmModal
+          title={confirmAction.title}
+          message={confirmAction.message}
+          danger={confirmAction.danger}
+          busy={confirmBusy}
+          onConfirm={handleConfirmYes}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
     </div>
   );
 }

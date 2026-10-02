@@ -6,9 +6,7 @@ import { StudentsRepository } from '../students/students.repository';
 export interface TeamLeaderReportRow {
   studentCode: string;
   name: string;
-  /** index 0..4 = problem 1..5, null = not yet scored */
   scores: (number | null)[];
-  /** Same indexing as `scores` — lets the mentor request an edit on one cell. */
   scoreIds: (string | null)[];
   total: number;
 }
@@ -22,14 +20,6 @@ export interface TeamLeaderReport {
 
 const PROBLEM_COUNT = 5;
 
-/**
- * SPEC §4.4 / §5.3 — GET /api/team-leader/export and the /team-leader page's table.
- *
- * `schoolId` here MUST be `session.user.schoolId`, never a client-supplied
- * value (SPEC §4.4 calls this out explicitly as an IDOR risk) — enforced by
- * only ever wiring this use case to `@CurrentUser().schoolId` at the
- * controller, never to a query/body parameter.
- */
 @Injectable()
 export class GetTeamLeaderReportUseCase {
   constructor(

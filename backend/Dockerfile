@@ -1,6 +1,3 @@
-# Single image for the API and the one-off migrate/seed Container Apps Job:
-# the job runs `npm run migrate` (ts-node over src/ + migrations/*.sql), so
-# devDependencies, src/ and migrations/ are kept alongside dist/.
 FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./

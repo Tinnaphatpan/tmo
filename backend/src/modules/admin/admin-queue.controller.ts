@@ -8,9 +8,9 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { QueueRepository } from '../queue/queue.repository';
 import { ManageQueueUseCase } from './use-cases/manage-queue.use-case';
 import { GenerateQueueScheduleUseCase } from './use-cases/generate-queue-schedule.use-case';
-import { CreateQueueItemDto, GenerateScheduleDto, MoveQueueItemDto, SetQueueTimeDto } from './dto/manage-queue.dto';
+import { ResetQueueUseCase } from './use-cases/reset-queue.use-case';
+import { CreateQueueItemDto, GenerateScheduleDto, MoveQueueItemDto, UpdateQueueItemDto } from './dto/manage-queue.dto';
 
-// SPEC §2.5 — /api/admin/queue (ADMIN only).
 @Controller('admin/queue')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')
@@ -19,6 +19,7 @@ export class AdminQueueController {
     private readonly manageQueue: ManageQueueUseCase,
     private readonly queueRepository: QueueRepository,
     private readonly generateSchedule: GenerateQueueScheduleUseCase,
+    private readonly resetQueue: ResetQueueUseCase,
     private readonly realtimeService: RealtimeService,
   ) {}
 
@@ -27,7 +28,6 @@ export class AdminQueueController {
     return this.queueRepository.findAllWithSchool();
   }
 
-  /** Builds the full rotation queue (16 centres x 5 problems with 15-minute slots from 13:30). */
   @Post('generate')
   async generate(@CurrentUser() user: User, @Body() dto: GenerateScheduleDto) {
     const result = await this.generateSchedule.execute({
@@ -52,16 +52,25 @@ export class AdminQueueController {
     return { ok: true };
   }
 
-  @Patch(':id/time')
-  async setTime(@Param('id') id: string, @Body() dto: SetQueueTimeDto) {
-    await this.manageQueue.setScheduledTime(id, dto.date, dto.time);
+  /** Full edit — school, problem and time together (SPEC-adjacent extension past the original time-only edit). */
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateQueueItemDto) {
+    const item = await this.manageQueue.update(id, dto);
     this.realtimeService.notifyChange();
-    return { ok: true };
+    return { item };
   }
 
   @Delete()
   async remove(@Query('id') id: string) {
     await this.manageQueue.remove(id);
     return { ok: true };
+  }
+
+  /** UI-reachable equivalent of `npm run reset:test -- --yes` — see ResetQueueUseCase. */
+  @Post('reset')
+  async reset(@CurrentUser() user: User) {
+    const result = await this.resetQueue.execute(user.id);
+    this.realtimeService.notifyChange();
+    return result;
   }
 }

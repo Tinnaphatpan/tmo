@@ -136,18 +136,38 @@ describe('ManageQueueUseCase', () => {
     await expect(useCase.move('nope', 'up')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('setScheduledTime edits a WAITING item (Bangkok time), keeps position; 409 if started, 404 if unknown', async () => {
+  it('update edits school/problem/time together on a WAITING item (Bangkok time); keeps Position when the problem is unchanged', async () => {
     const queueRepo = new FakeQueueRepository();
-    queueRepo.seed(makeQueueItem({ id: 'a', position: 3 }));
+    queueRepo.seed(makeQueueItem({ id: 'a', schoolId: 's1', problemNumber: 1, position: 3 }));
     queueRepo.seed(makeQueueItem({ id: 'b', status: 'IN_PROGRESS' }));
     const useCase = new ManageQueueUseCase(queueRepo);
 
-    await useCase.setScheduledTime('a', '2026-05-17', '14:45');
+    await useCase.update('a', { schoolId: 's9', problemNumber: 1, date: '2026-05-17', time: '14:45' });
     const a = await queueRepo.findById('a');
-    expect(a?.position).toBe(3);
+    expect(a).toMatchObject({ schoolId: 's9', problemNumber: 1, position: 3 });
     expect(new Date(a!.scheduledAt!).toISOString()).toBe('2026-05-17T07:45:00.000Z');
-    await expect(useCase.setScheduledTime('b', '2026-05-17', '14:45')).rejects.toBeInstanceOf(ConflictException);
-    await expect(useCase.setScheduledTime('nope', '2026-05-17', '14:45')).rejects.toBeInstanceOf(NotFoundException);
+
+    await expect(
+      useCase.update('b', { schoolId: 's1', problemNumber: 1, date: '2026-05-17', time: '14:45' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      useCase.update('nope', { schoolId: 's1', problemNumber: 1, date: '2026-05-17', time: '14:45' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('update moving to a different problem appends to the end of that problem’s queue; 409 if the new cell is taken', async () => {
+    const queueRepo = new FakeQueueRepository();
+    queueRepo.seed(makeQueueItem({ id: 'a', schoolId: 's1', problemNumber: 1, position: 0 }));
+    queueRepo.seed(makeQueueItem({ id: 'x', schoolId: 's9', problemNumber: 2, position: 0 }));
+    queueRepo.seed(makeQueueItem({ id: 'y', schoolId: 's8', problemNumber: 2, position: 1 }));
+    const useCase = new ManageQueueUseCase(queueRepo);
+
+    await useCase.update('a', { schoolId: 's1', problemNumber: 2, date: '2026-05-17', time: '14:45' });
+    expect(await queueRepo.findById('a')).toMatchObject({ problemNumber: 2, position: 2 });
+
+    await expect(
+      useCase.update('a', { schoolId: 's9', problemNumber: 2, date: '2026-05-17', time: '14:45' }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('remove deletes the item', async () => {

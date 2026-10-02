@@ -3,9 +3,11 @@
 import { ListOrdered } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { SchoolRef } from "@/lib/types";
 
 import { useT } from "@/lib/i18n";
@@ -18,6 +20,7 @@ interface AdminQueueItem {
   schoolId: string;
   schoolName: string;
   schoolCode: string | null;
+  claimedByUserId: string | null;
 }
 
 function formatTime(iso: string | null): string {
@@ -31,9 +34,12 @@ function formatTime(iso: string | null): string {
 
 export default function AdminQueuePage() {
   const t = useT();
+  const router = useRouter();
   const [items, setItems] = useState<AdminQueueItem[]>([]);
   const [schools, setSchools] = useState<SchoolRef[]>([]);
+  const [selfId, setSelfId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const [filterProblem, setFilterProblem] = useState<number | "all">("all");
   const [schoolId, setSchoolId] = useState("");
   const [problemNumber, setProblemNumber] = useState(1);
@@ -43,9 +49,20 @@ export default function AdminQueuePage() {
   const [startTime, setStartTime] = useState("13:30");
   const [slotMinutes, setSlotMinutes] = useState(15);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editSchoolId, setEditSchoolId] = useState("");
+  const [editProblemNumber, setEditProblemNumber] = useState(1);
   const [editValue, setEditValue] = useState("");
   const [generating, setGenerating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    danger?: boolean;
+    requireText?: string;
+    errorFallback?: string;
+    run: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -63,16 +80,49 @@ export default function AdminQueuePage() {
   useEffect(() => {
     load();
   }, [load]);
+  useEffect(() => {
+    api
+      .get<{ id: string }>("/auth/me")
+      .then(({ data }) => setSelfId(data.id))
+      .catch(() => setSelfId(null));
+  }, []);
 
-  async function handleAdd() {
-    if (!schoolId) return;
+  // Admin claims a WAITING item directly from this table (school/problem/time
+  // all visible right here) then jumps to /staff, the actual grading
+  // workspace (ScoreForm) — see staff/page.tsx's doc comment.
+  async function handleClaim(id: string) {
     setError(null);
+    setClaimingId(id);
     try {
-      await api.post("/admin/queue", { schoolId, problemNumber });
-      await load();
+      await api.post(`/queue/${id}/claim`);
+      router.push("/staff");
     } catch (err) {
-      setError(getApiErrorMessage(err, t("failed_to_add_the_item")));
+      setError(getApiErrorMessage(err, t("failed_to_claim")));
+      await load();
+    } finally {
+      setClaimingId(null);
     }
+  }
+
+  // Validate -> confirm -> save -> success message, per the queue-management
+  // flow diagram ("ตรวจสอบความถูกต้องของข้อมูล" -> "ยืนยันการบันทึกข้อมูล").
+  function handleAddClick() {
+    setError(null);
+    setNotice(null);
+    if (!schoolId) {
+      setError(t("please_choose_a_school_first"));
+      return;
+    }
+    const school = schools.find((s) => s.id === schoolId);
+    setConfirmAction({
+      title: t("confirm_add_queue_item"),
+      message: t("confirm_add_item_school_problem", { school: school?.name ?? "", n: problemNumber }),
+      run: async () => {
+        await api.post("/admin/queue", { schoolId, problemNumber });
+        await load();
+        setNotice(t("added_queue_item_successfully"));
+      },
+    });
   }
 
   async function handleGenerate() {
@@ -100,8 +150,13 @@ export default function AdminQueuePage() {
     }
   }
 
+  // Full edit (school + problem + time together), per the queue-management
+  // flow diagram: fetch the item, pre-fill a form with its current data,
+  // let the admin change anything, then validate -> confirm -> save.
   function startEdit(item: AdminQueueItem) {
     setEditingId(item.id);
+    setEditSchoolId(item.schoolId);
+    setEditProblemNumber(item.problemNumber);
     if (item.scheduledAt) {
       const d = new Date(item.scheduledAt);
       const day = d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
@@ -111,16 +166,34 @@ export default function AdminQueuePage() {
     }
   }
 
-  async function handleSaveTime(id: string) {
-    const [date, time] = editValue.split("T");
+  function handleSaveEditClick(item: AdminQueueItem) {
     setError(null);
-    try {
-      await api.patch(`/admin/queue/${id}/time`, { date, time });
-      setEditingId(null);
-      await load();
-    } catch (err) {
-      setError(getApiErrorMessage(err, t("failed_to_change_the_time")));
+    setNotice(null);
+    const [date, time] = editValue.split("T");
+    if (!editSchoolId || !date || !time) {
+      setError(t("please_choose_a_valid_date_and_time"));
+      return;
     }
+    const school = schools.find((s) => s.id === editSchoolId);
+    setConfirmAction({
+      title: t("confirm_edit_queue_item"),
+      message: t("confirm_edit_queue_item_message", {
+        school: school?.name ?? "",
+        n: editProblemNumber,
+        value: editValue.replace("T", " "),
+      }),
+      run: async () => {
+        await api.patch(`/admin/queue/${item.id}`, {
+          schoolId: editSchoolId,
+          problemNumber: editProblemNumber,
+          date,
+          time,
+        });
+        setEditingId(null);
+        await load();
+        setNotice(t("edited_queue_item_successfully"));
+      },
+    });
   }
 
   async function handleMove(id: string, direction: "up" | "down") {
@@ -141,13 +214,63 @@ export default function AdminQueuePage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm(t("delete_this_queue_item"))) return;
+  function handleDeleteClick(item: AdminQueueItem) {
+    setError(null);
+    setNotice(null);
+    setConfirmAction({
+      title: t("delete_this_queue_item"),
+      message: t("confirm_delete_item_school_problem", { school: item.schoolName, n: item.problemNumber }),
+      danger: true,
+      run: async () => {
+        await api.delete("/admin/queue", { params: { id: item.id } });
+        await load();
+        setNotice(t("deleted_queue_item_successfully"));
+      },
+    });
+  }
+
+  // Admin-UI equivalent of `npm run reset:test -- --yes` — deletes every
+  // score/edit-request/related audit row and rewinds the queue to WAITING.
+  // Gated by a typed "RESET" confirmation (beyond the usual click) since
+  // it's irreversible; backend also refuses when NODE_ENV=production.
+  function handleResetClick() {
+    setError(null);
+    setNotice(null);
+    setConfirmAction({
+      title: t("confirm_reset_queue_title"),
+      message: t("confirm_reset_queue_message"),
+      danger: true,
+      requireText: "RESET",
+      errorFallback: t("failed_to_reset_the_queue"),
+      run: async () => {
+        const { data } = await api.post<{
+          scoresDeleted: number;
+          editRequestsDeleted: number;
+          queueItemsRewound: number;
+        }>("/admin/queue/reset");
+        await load();
+        setNotice(
+          t("reset_queue_successfully", {
+            scores: data.scoresDeleted,
+            edits: data.editRequestsDeleted,
+            items: data.queueItemsRewound,
+          }),
+        );
+      },
+    });
+  }
+
+  async function handleConfirmYes() {
+    if (!confirmAction) return;
+    setConfirmBusy(true);
     try {
-      await api.delete("/admin/queue", { params: { id } });
-      await load();
+      await confirmAction.run();
+      setConfirmAction(null);
     } catch (err) {
-      setError(getApiErrorMessage(err, t("failed_to_delete")));
+      setError(getApiErrorMessage(err, confirmAction.errorFallback ?? t("action_failed")));
+      setConfirmAction(null);
+    } finally {
+      setConfirmBusy(false);
     }
   }
 
@@ -159,6 +282,9 @@ export default function AdminQueuePage() {
     <div className="space-y-6">
       <PageHeader icon={ListOrdered} title={t("manage_queue")} />
       {error && <p className="text-sm text-state-active-fg">{error}</p>}
+      {notice && (
+        <p className="rounded-lg bg-state-done-bg px-3 py-2 text-sm text-state-done-fg">{notice}</p>
+      )}
 
       <div className="card-soft space-y-3 p-4">
         <div>
@@ -213,7 +339,6 @@ export default function AdminQueuePage() {
             {generating ? t("generating") : t("generate_schedule")}
           </Button>
         </div>
-        {notice && <p className="rounded-lg bg-state-done-bg px-3 py-2 text-sm text-state-done-fg">{notice}</p>}
       </div>
 
       <div className="card-soft flex flex-wrap items-end gap-3 p-4">
@@ -246,7 +371,7 @@ export default function AdminQueuePage() {
             ))}
           </select>
         </div>
-        <Button onClick={handleAdd} disabled={!schoolId}>
+        <Button onClick={handleAddClick} disabled={!schoolId}>
           {t("add_item")}
         </Button>
 
@@ -278,32 +403,58 @@ export default function AdminQueuePage() {
               <th className="px-3 py-2">{t("no")}</th>
               <th className="px-3 py-2">{t("time")}</th>
               <th className="px-3 py-2">{t("status")}</th>
-              <th className="px-3 py-2" />
+              <th className="sticky right-0 bg-surface px-3 py-2" />
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
             {filtered.map((item) => (
               <tr key={item.id}>
-                <td className="px-3 py-2 text-ink-900">{item.schoolName}</td>
-                <td className="px-3 py-2 text-ink-700">{item.problemNumber}</td>
+                <td className="px-3 py-2 text-ink-900">
+                  {editingId === item.id ? (
+                    <select
+                      aria-label={t("schools")}
+                      value={editSchoolId}
+                      onChange={(e) => setEditSchoolId(e.target.value)}
+                      className="w-full max-w-[180px] truncate rounded-lg border border-line bg-surface px-2 py-1 text-ink-900"
+                    >
+                      {schools.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    item.schoolName
+                  )}
+                </td>
+                <td className="px-3 py-2 text-ink-700">
+                  {editingId === item.id ? (
+                    <select
+                      aria-label={t("problem")}
+                      value={editProblemNumber}
+                      onChange={(e) => setEditProblemNumber(Number(e.target.value))}
+                      className="rounded-lg border border-line bg-surface px-2 py-1 text-ink-900"
+                    >
+                      {[1, 2, 3, 4, 5].map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    item.problemNumber
+                  )}
+                </td>
                 <td className="px-3 py-2 text-ink-700">{item.position}</td>
                 <td className="px-3 py-2 text-ink-700 tabular-nums">
                   {editingId === item.id ? (
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="datetime-local"
-                        aria-label={t("exam_time")}
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="rounded-lg border border-line bg-surface px-2 py-1 text-ink-900"
-                      />
-                      <Button onClick={() => handleSaveTime(item.id)} disabled={!editValue}>
-                        {t("save")}
-                      </Button>
-                      <Button variant="ghost" onClick={() => setEditingId(null)}>
-                        {t("cancel")}
-                      </Button>
-                    </div>
+                    <input
+                      type="datetime-local"
+                      aria-label={t("exam_time")}
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="rounded-lg border border-line bg-surface px-2 py-1 text-ink-900"
+                    />
                   ) : (
                     formatTime(item.scheduledAt)
                   )}
@@ -311,34 +462,80 @@ export default function AdminQueuePage() {
                 <td className="px-3 py-2">
                   <StatusBadge status={item.status} />
                 </td>
-                <td className="px-3 py-2">
-                  <div className="flex justify-end gap-1.5">
-                    <Button variant="ghost" onClick={() => handleMove(item.id, "up")}>
-                      ↑
-                    </Button>
-                    <Button variant="ghost" onClick={() => handleMove(item.id, "down")}>
-                      ↓
-                    </Button>
-                    {item.status === "WAITING" && editingId !== item.id && (
-                      <Button variant="secondary" onClick={() => startEdit(item)}>
-                        {t("edit_time")}
+                <td className="sticky right-0 bg-surface px-3 py-2">
+                  {editingId === item.id ? (
+                    <div className="flex justify-end gap-1.5">
+                      <Button onClick={() => handleSaveEditClick(item)} disabled={!editSchoolId || !editValue}>
+                        {t("save")}
                       </Button>
-                    )}
-                    {item.status === "IN_PROGRESS" && (
-                      <Button variant="secondary" onClick={() => handleForceRelease(item.id)}>
-                        {t("release")}
+                      <Button variant="ghost" onClick={() => setEditingId(null)}>
+                        {t("cancel")}
                       </Button>
-                    )}
-                    <Button variant="danger" onClick={() => handleDelete(item.id)}>
-                      {t("delete")}
-                    </Button>
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-end gap-1.5">
+                      <Button variant="ghost" onClick={() => handleMove(item.id, "up")}>
+                        ↑
+                      </Button>
+                      <Button variant="ghost" onClick={() => handleMove(item.id, "down")}>
+                        ↓
+                      </Button>
+                      {item.status === "WAITING" && (
+                        <>
+                          <Button
+                            disabled={claimingId !== null}
+                            onClick={() => handleClaim(item.id)}
+                          >
+                            {claimingId === item.id ? t("claiming") : t("claim_and_grade")}
+                          </Button>
+                          <Button variant="secondary" onClick={() => startEdit(item)}>
+                            {t("edit")}
+                          </Button>
+                        </>
+                      )}
+                      {item.status === "IN_PROGRESS" && (
+                        <>
+                          {item.claimedByUserId === selfId && (
+                            <Button onClick={() => router.push("/staff")}>{t("go_grade")}</Button>
+                          )}
+                          <Button variant="secondary" onClick={() => handleForceRelease(item.id)}>
+                            {t("release")}
+                          </Button>
+                        </>
+                      )}
+                      <Button variant="danger" onClick={() => handleDeleteClick(item)}>
+                        {t("delete")}
+                      </Button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <div className="card-soft space-y-3 border border-saed-200 p-4">
+        <div>
+          <h3 className="font-semibold text-saed-600">{t("danger_zone")}</h3>
+          <p className="text-sm text-ink-500">{t("reset_queue_description")}</p>
+        </div>
+        <Button variant="danger" onClick={handleResetClick}>
+          {t("reset_queue")}
+        </Button>
+      </div>
+
+      {confirmAction && (
+        <ConfirmModal
+          title={confirmAction.title}
+          message={confirmAction.message}
+          danger={confirmAction.danger}
+          requireText={confirmAction.requireText}
+          busy={confirmBusy}
+          onConfirm={handleConfirmYes}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
     </div>
   );
 }

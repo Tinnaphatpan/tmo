@@ -212,6 +212,13 @@ export class MssqlQueueRepository extends QueueRepository {
     return result.recordset.map(toEntityWithSchool);
   }
 
+  async findAllPendingApproval(executor?: Executor): Promise<QueueItemWithSchool[]> {
+    const result = await request(this.exec(executor)).query<QueueItemWithSchoolRow>(
+      `${SELECT_WITH_SCHOOL} WHERE q.ApprovalStatus = 'PENDING' ORDER BY s.Name, q.ProblemNumber`,
+    );
+    return result.recordset.map(toEntityWithSchool);
+  }
+
   async create(
     input: { schoolId: string; problemNumber: number; position: number; scheduledAt: Date | null },
     executor?: Executor,
@@ -247,6 +254,24 @@ export class MssqlQueueRepository extends QueueRepository {
       .input('position', sql.Int, position)
       .input('scheduledAt', sql.DateTime2, scheduledAt)
       .query('UPDATE QueueItem SET Position = @position, ScheduledAt = @scheduledAt WHERE Id = @id');
+  }
+
+  async updateDetails(
+    id: string,
+    input: { schoolId: string; problemNumber: number; position: number; scheduledAt: Date },
+    executor?: Executor,
+  ): Promise<void> {
+    await request(this.exec(executor))
+      .input('id', sql.UniqueIdentifier, id)
+      .input('schoolId', sql.UniqueIdentifier, input.schoolId)
+      .input('problemNumber', sql.Int, input.problemNumber)
+      .input('position', sql.Int, input.position)
+      .input('scheduledAt', sql.DateTime2, input.scheduledAt)
+      .query(`
+        UPDATE QueueItem
+        SET SchoolId = @schoolId, ProblemNumber = @problemNumber, Position = @position, ScheduledAt = @scheduledAt
+        WHERE Id = @id
+      `);
   }
 
   async delete(id: string, executor?: Executor): Promise<void> {

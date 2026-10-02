@@ -57,7 +57,8 @@ export function homePathForRole(role: Role): string {
  * /login. If the backend is unreachable, fall back to the decoded cookie
  * (UX only — every API call is still authorized by the backend).
  */
-export async function requireRole(required: Role): Promise<SessionUser> {
+export async function requireRole(required: Role | Role[]): Promise<SessionUser> {
+  const allowed = Array.isArray(required) ? required : [required];
   const token = await getSessionToken();
   if (!token) redirect("/login");
 
@@ -76,6 +77,6 @@ export async function requireRole(required: Role): Promise<SessionUser> {
 
   const session = fresh ?? (await getSession());
   if (!session) redirect("/login");
-  if (session.role !== required) redirect(homePathForRole(session.role));
+  if (!allowed.includes(session.role)) redirect(homePathForRole(session.role));
   return session;
 }

@@ -12,25 +12,6 @@ function byOrder(a: Item, b: Item) {
   return a.position - b.position;
 }
 
-/** Numbered chips "1 2 3 …" — anonymous, the public board never shows student names. */
-function StudentNumbers({ count, tone }: { count: number; tone: string }) {
-  const t = useT();
-  if (count <= 0) return null;
-  return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      <span className="text-xs text-ink-500">{t("student_no")}</span>
-      {Array.from({ length: count }, (_, i) => (
-        <span
-          key={i}
-          className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums ${tone}`}
-        >
-          {i + 1}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 /** Per-problem live status: who is being graded now, who is next, and progress. */
 export function ProblemStatusCards({ data }: { data: PublicQueueResult }) {
   const t = useT();
@@ -81,10 +62,6 @@ export function ProblemStatusCards({ data }: { data: PublicQueueResult }) {
                         {current.school.name}
                       </div>
                     </div>
-                    <StudentNumbers
-                      count={current.school.studentCount ?? 0}
-                      tone="bg-blue-100 text-blue-700"
-                    />
                   </div>
                 ) : (
                   <p className="mt-1 inline-flex rounded-full border border-state-queued-border bg-state-queued-bg px-3 py-1 text-sm font-medium text-state-queued-fg">
@@ -101,12 +78,6 @@ export function ProblemStatusCards({ data }: { data: PublicQueueResult }) {
                   {next && <SchoolLogo code={next.school.code} size={28} />}
                   {next ? next.school.name : t("nobody_waiting")}
                 </p>
-                {next && (
-                  <StudentNumbers
-                    count={next.school.studentCount ?? 0}
-                    tone="bg-white text-ink-700 ring-1 ring-black/10"
-                  />
-                )}
               </div>
             </div>
           </article>

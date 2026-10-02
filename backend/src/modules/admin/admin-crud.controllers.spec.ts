@@ -35,6 +35,13 @@ import { ManageQueueUseCase } from './use-cases/manage-queue.use-case';
 import { GetDashboardUseCase } from './use-cases/get-dashboard.use-case';
 import { StudentImportUseCase } from './student-import/student-import.use-case';
 import { GenerateQueueScheduleUseCase } from './use-cases/generate-queue-schedule.use-case';
+import { ResetQueueUseCase } from './use-cases/reset-queue.use-case';
+import { ResetQueueRepository } from './reset-queue.repository';
+import { FakeResetQueueRepository } from '../../testing/fake-reset-queue.repository';
+import { AdminUpdateScoreUseCase } from './use-cases/admin-update-score.use-case';
+import { ScoreSheetGenerator } from '../approval/score-sheet-generator';
+import { FileStorage } from '../../common/file-storage';
+import { FakeFileStorage } from '../../testing/fake-file-storage';
 import { FakeTransactionRunner } from '../../testing/fake-transaction-runner';
 import { TransactionRunner } from '../../database/transaction-runner';
 
@@ -49,7 +56,10 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
   let audit: FakeAuditLogRepository;
   let settings: FakeSettingsRepository;
   let assignments: FakeUserAssignmentRepository;
+  let fileStorage: FakeFileStorage;
+  let resetQueueRepo: FakeResetQueueRepository;
   const notifyChange = jest.fn();
+  const originalNodeEnv = process.env.NODE_ENV;
 
   beforeEach(async () => {
     schools = new FakeSchoolsRepository();
@@ -59,7 +69,10 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
     audit = new FakeAuditLogRepository();
     settings = new FakeSettingsRepository();
     assignments = new FakeUserAssignmentRepository();
+    fileStorage = new FakeFileStorage();
+    resetQueueRepo = new FakeResetQueueRepository();
     notifyChange.mockClear();
+    process.env.NODE_ENV = 'test';
     api = await createApiTestApp({
       controllers: [
         AdminCommitteeController,
@@ -89,12 +102,20 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
         GetDashboardUseCase,
         StudentImportUseCase,
         GenerateQueueScheduleUseCase,
+        { provide: ResetQueueRepository, useValue: resetQueueRepo },
+        ResetQueueUseCase,
+        AdminUpdateScoreUseCase,
+        ScoreSheetGenerator,
+        { provide: FileStorage, useValue: fileStorage },
         { provide: TransactionRunner, useValue: new FakeTransactionRunner() },
       ],
     });
   });
 
-  afterEach(() => api.app.close());
+  afterEach(async () => {
+    await api.app.close();
+    process.env.NODE_ENV = originalNodeEnv;
+  });
 
   const http = () => request(api.app.getHttpServer());
   const admin = () => api.login({ role: 'ADMIN' });
@@ -113,12 +134,15 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
     ['post', '/admin/queue'],
     ['patch', '/admin/queue'],
     ['delete', '/admin/queue'],
+    ['patch', '/admin/queue/nope'],
     ['post', '/admin/queue/generate'],
+    ['post', '/admin/queue/reset'],
     ['get', '/admin/students'],
     ['post', '/admin/students/import'],
     ['delete', '/admin/students'],
     ['get', '/admin/scores'],
     ['get', '/admin/scores/export'],
+    ['patch', '/admin/scores/nope'],
     ['get', '/admin/audit-log'],
     ['get', '/admin/dashboard'],
     ['patch', '/admin/settings/lock'],
@@ -263,6 +287,75 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
       await http().delete('/admin/queue').query({ id: 'q1' }).set('Authorization', admin()).expect(200).expect({ ok: true });
       expect(await queue.findById('q1')).toBeNull();
     });
+
+    describe('PATCH /admin/queue/:id (full edit)', () => {
+      it('updates school, problem and time together on a WAITING item', async () => {
+        queue.seed(makeQueueItem({ id: 'q1', schoolId: U(1), problemNumber: 1, position: 3 }));
+        const res = await http()
+          .patch('/admin/queue/q1')
+          .set('Authorization', admin())
+          .send({ schoolId: U(2), problemNumber: 3, date: '2026-05-17', time: '14:00' })
+          .expect(200);
+        expect(res.body.item).toMatchObject({ schoolId: U(2), problemNumber: 3 });
+        const updated = await queue.findById('q1');
+        expect(updated?.schoolId).toBe(U(2));
+        expect(updated?.problemNumber).toBe(3);
+        expect(updated?.scheduledAt?.toISOString()).toBe(new Date('2026-05-17T14:00:00+07:00').toISOString());
+      });
+
+      it('404 for an unknown item; 400 for bad input', async () => {
+        await http()
+          .patch('/admin/queue/nope')
+          .set('Authorization', admin())
+          .send({ schoolId: U(2), problemNumber: 3, date: '2026-05-17', time: '14:00' })
+          .expect(404);
+        queue.seed(makeQueueItem({ id: 'q1', schoolId: U(1), problemNumber: 1 }));
+        await http()
+          .patch('/admin/queue/q1')
+          .set('Authorization', admin())
+          .send({ schoolId: 'x', problemNumber: 1, date: '2026-05-17', time: '14:00' })
+          .expect(400);
+        await http()
+          .patch('/admin/queue/q1')
+          .set('Authorization', admin())
+          .send({ schoolId: U(1), problemNumber: 1, date: 'not-a-date', time: '14:00' })
+          .expect(400);
+      });
+
+      it('409 when the item is not WAITING; 409 when the new school+problem is already taken', async () => {
+        queue.seed(makeQueueItem({ id: 'q1', schoolId: U(1), problemNumber: 1, status: 'IN_PROGRESS' }));
+        await http()
+          .patch('/admin/queue/q1')
+          .set('Authorization', admin())
+          .send({ schoolId: U(1), problemNumber: 1, date: '2026-05-17', time: '14:00' })
+          .expect(409);
+
+        queue.seed(makeQueueItem({ id: 'q2', schoolId: U(2), problemNumber: 1 }));
+        queue.seed(makeQueueItem({ id: 'q3', schoolId: U(3), problemNumber: 1 }));
+        await http()
+          .patch('/admin/queue/q2')
+          .set('Authorization', admin())
+          .send({ schoolId: U(3), problemNumber: 1, date: '2026-05-17', time: '14:00' })
+          .expect(409);
+      });
+    });
+
+    describe('POST /admin/queue/reset', () => {
+      it('resets the queue, records a QUEUE_RESET audit row and notifies the realtime stream', async () => {
+        resetQueueRepo.seedResult({ scoresDeleted: 5, editRequestsDeleted: 1, auditRowsDeleted: 6, queueItemsRewound: 80 });
+        const res = await http().post('/admin/queue/reset').set('Authorization', admin()).expect(201);
+        expect(res.body).toEqual({ scoresDeleted: 5, editRequestsDeleted: 1, auditRowsDeleted: 6, queueItemsRewound: 80 });
+        expect(resetQueueRepo.calls).toBe(1);
+        expect(audit.entries.map((e) => e.action)).toContain('QUEUE_RESET');
+        expect(notifyChange).toHaveBeenCalled();
+      });
+
+      it('refuses with 403 when NODE_ENV=production, and performs no reset', async () => {
+        process.env.NODE_ENV = 'production';
+        await http().post('/admin/queue/reset').set('Authorization', admin()).expect(403);
+        expect(resetQueueRepo.calls).toBe(0);
+      });
+    });
   });
 
   describe('/admin/students', () => {
@@ -340,6 +433,102 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
       expect(lines[0]).toContain('โรงเรียน');
       expect(lines[1]).toContain('7.50');
       expect(lines[1]).toContain('committee1');
+    });
+
+    it('PATCH /:id overwrites the value directly and writes an ADMIN_SCORE_OVERRIDE audit row — no approval needed', async () => {
+      scores.scores.push({
+        id: 'sc-1',
+        studentId: 'st-1',
+        queueItemId: 'q-1',
+        value: 5,
+        judgeId: 'judge-1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      queue.seed(makeQueueItem({ id: 'q-1', approvalStatus: 'NOT_SUBMITTED' }));
+
+      await http()
+        .patch('/admin/scores/sc-1')
+        .set('Authorization', admin())
+        .send({ value: 9 })
+        .expect(200)
+        .expect({ ok: true });
+
+      expect((await scores.findById('sc-1'))?.value).toBe(9);
+      const entry = audit.entries.find((e) => e.entityId === 'sc-1');
+      expect(entry).toMatchObject({ action: 'ADMIN_SCORE_OVERRIDE', oldValue: '5.00', newValue: '9.00' });
+    });
+
+    it('PATCH /:id regenerates the PDF when the item was already approved', async () => {
+      scores.scores.push({
+        id: 'sc-2',
+        studentId: 'st-1',
+        queueItemId: 'q-2',
+        value: 4,
+        judgeId: 'judge-1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      queue.seed(
+        makeQueueItem({
+          id: 'q-2',
+          schoolId: 'school-1',
+          approvalStatus: 'APPROVED',
+          documentPath: 'old.pdf',
+          submittedByUserId: 'judge-1',
+          approvedByUserId: 'leader-1',
+        }),
+      );
+      schools.seed({ id: 'school-1', name: 'โรงเรียน A', code: 'A' });
+      students.seed(makeStudent({ id: 'st-1', schoolId: 'school-1', seqNo: 1 }));
+      const PNG = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        'base64',
+      );
+      fileStorage.signatures.set('/sig/judge.png', PNG);
+      fileStorage.signatures.set('/sig/leader.png', PNG);
+      api.usersRepo.seed({
+        id: 'judge-1',
+        username: 'judge-1',
+        displayName: 'Judge',
+        passwordHash: 'x',
+        role: 'COMMITTEE',
+        schoolId: null,
+        signaturePath: '/sig/judge.png',
+      });
+      api.usersRepo.seed({
+        id: 'leader-1',
+        username: 'leader-1',
+        displayName: 'Leader',
+        passwordHash: 'x',
+        role: 'TEAM_LEADER',
+        schoolId: 'school-1',
+        signaturePath: '/sig/leader.png',
+      });
+
+      await http()
+        .patch('/admin/scores/sc-2')
+        .set('Authorization', admin())
+        .send({ value: 8 })
+        .expect(200);
+
+      const item = await queue.findById('q-2');
+      expect(item?.documentPath).not.toBe('old.pdf');
+      expect(fileStorage.pdfs.size).toBe(1);
+    });
+
+    it('PATCH /:id: 400 outside 0-10; 404 for an unknown score', async () => {
+      scores.scores.push({
+        id: 'sc-3',
+        studentId: 'st-1',
+        queueItemId: 'q-1',
+        value: 5,
+        judgeId: 'judge-1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      await http().patch('/admin/scores/sc-3').set('Authorization', admin()).send({ value: 11 }).expect(400);
+      await http().patch('/admin/scores/nope').set('Authorization', admin()).send({ value: 5 }).expect(404);
     });
   });
 

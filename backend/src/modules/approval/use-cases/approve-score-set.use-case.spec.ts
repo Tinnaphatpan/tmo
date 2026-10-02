@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { ApproveScoreSetUseCase } from './approve-score-set.use-case';
 import { ScoreSheetGenerator } from '../score-sheet-generator';
 import { FakeQueueRepository, makeQueueItem } from '../../../testing/fake-queue.repository';
@@ -56,6 +56,11 @@ function setUp(overrides?: {
   usersRepo.seed(
     makeUser({ id: 'leader-2', role: 'TEAM_LEADER', schoolId: 'school-2', signaturePath: '/sig/leader-2.png' }),
   );
+  const adminSignaturePath = '/sig/admin-1.png';
+  fileStorage.signatures.set(adminSignaturePath, FIXTURE_PNG);
+  usersRepo.seed(
+    makeUser({ id: 'admin-1', role: 'ADMIN', schoolId: null, signaturePath: adminSignaturePath }),
+  );
 
   schoolsRepo.seed({ id: 'school-1', name: 'โรงเรียน A', code: 'A' });
   studentsRepo.seed(makeStudent({ id: 's1', schoolId: 'school-1', seqNo: 1 }));
@@ -89,6 +94,16 @@ describe('ApproveScoreSetUseCase', () => {
     expect(pdfBuffer.subarray(0, 4).toString()).toBe('%PDF'); // real pdfkit output, Thai font embeds cleanly
   });
 
+  it('isAdmin bypasses the same-school ownership check and signs the PDF as the admin', async () => {
+    const { useCase, queueRepo } = setUp();
+
+    await useCase.execute({ queueItemId: 'q1', teamLeaderId: 'admin-1', isAdmin: true });
+
+    const item = await queueRepo.findById('q1');
+    expect(item?.approvalStatus).toBe('APPROVED');
+    expect(item?.approvedByUserId).toBe('admin-1');
+  });
+
   it('rejects with 403 when the team leader belongs to a different school (SPEC §4.4 IDOR guard)', async () => {
     const { useCase } = setUp();
 
@@ -107,19 +122,21 @@ describe('ApproveScoreSetUseCase', () => {
     expect((await queueRepo.findById('q1'))?.approvalStatus).toBe('APPROVED');
   });
 
-  it('rejects with 400 when the submitting judge has no signature on file', async () => {
-    const { useCase } = setUp({ judgeSignaturePath: null });
+  it('approves even when the submitting judge has no signature on file — PDF gets a text note instead (AuditLog covers it)', async () => {
+    const { useCase, queueRepo, fileStorage } = setUp({ judgeSignaturePath: null });
 
-    await expect(
-      useCase.execute({ queueItemId: 'q1', teamLeaderId: 'leader-1' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    await useCase.execute({ queueItemId: 'q1', teamLeaderId: 'leader-1' });
+
+    expect((await queueRepo.findById('q1'))?.approvalStatus).toBe('APPROVED');
+    expect(fileStorage.pdfs.size).toBe(1);
   });
 
-  it('rejects with 400 when the team leader has no signature on file', async () => {
-    const { useCase } = setUp({ leaderSignaturePath: null });
+  it('approves even when the team leader has no signature on file — PDF gets a text note instead (AuditLog covers it)', async () => {
+    const { useCase, queueRepo, fileStorage } = setUp({ leaderSignaturePath: null });
 
-    await expect(
-      useCase.execute({ queueItemId: 'q1', teamLeaderId: 'leader-1' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    await useCase.execute({ queueItemId: 'q1', teamLeaderId: 'leader-1' });
+
+    expect((await queueRepo.findById('q1'))?.approvalStatus).toBe('APPROVED');
+    expect(fileStorage.pdfs.size).toBe(1);
   });
 });

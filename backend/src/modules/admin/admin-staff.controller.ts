@@ -6,8 +6,6 @@ import { ManageStaffAssignmentsUseCase } from './use-cases/manage-staff.use-case
 import { ListStaffUseCase } from './use-cases/list-staff.use-case';
 import { CreateStaffDto, UpdateStaffDto } from './dto/upsert-staff.dto';
 
-// Admin CRUD for STAFF accounts + their (problemNumber, schoolId) delegation
-// scope — mirrors AdminCommitteeController.
 @Controller('admin/staff')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')

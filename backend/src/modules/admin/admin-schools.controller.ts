@@ -15,7 +15,6 @@ import { SchoolsRepository } from '../schools/schools.repository';
 import { ManageSchoolsUseCase } from './use-cases/manage-schools.use-case';
 import { CreateSchoolDto, UpdateSchoolDto } from './dto/upsert-school.dto';
 
-// SPEC §2.5 — /api/admin/schools (ADMIN only).
 @Controller('admin/schools')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')

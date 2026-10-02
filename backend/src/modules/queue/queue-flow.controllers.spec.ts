@@ -152,11 +152,18 @@ describe('Queue / scoring / edit-request / export endpoints (HTTP)', () => {
   });
 
   describe('GET /queue/mine', () => {
-    it('401 anonymous; 403 for ADMIN and TEAM_LEADER', async () => {
+    it('401 anonymous; 403 for TEAM_LEADER', async () => {
       await http_().get('/queue/mine').expect(401);
-      for (const role of ['ADMIN', 'TEAM_LEADER'] as const) {
-        await http_().get('/queue/mine').set('Authorization', api.login({ role })).expect(403);
-      }
+      await http_().get('/queue/mine').set('Authorization', api.login({ role: 'TEAM_LEADER' })).expect(403);
+    });
+
+    it('ADMIN sees every item, unfiltered by UserAssignment scope', async () => {
+      const auth = api.login({ id: 'admin-1', role: 'ADMIN' });
+      queue.seed(makeQueueItem({ id: 'a', problemNumber: 1, schoolId: 'school-1' }));
+      queue.seed(makeQueueItem({ id: 'b', problemNumber: 4, schoolId: 'school-2' }));
+
+      const res = await http_().get('/queue/mine').set('Authorization', auth).expect(200);
+      expect(res.body.items.map((i: { id: string }) => i.id).sort()).toEqual(['a', 'b']);
     });
 
     it('returns only items in the caller’s problem scope, with the nested roster and approvalStatus', async () => {
@@ -184,11 +191,13 @@ describe('Queue / scoring / edit-request / export endpoints (HTTP)', () => {
       queue.seed(makeQueueItem({ id: 'q1', schoolId: 'school-1', status: 'IN_PROGRESS', claimedByUserId: by }));
     const full = { scores: [{ studentId: S1, value: 5 }, { studentId: S2, value: 7.5 }] };
 
-    it('401 anonymous; 403 for ADMIN/TEAM_LEADER', async () => {
+    it('401 anonymous; 403 for TEAM_LEADER', async () => {
       await http_().post('/queue/q1/score').send(full).expect(401);
-      for (const role of ['ADMIN', 'TEAM_LEADER'] as const) {
-        await http_().post('/queue/q1/score').set('Authorization', api.login({ role })).send(full).expect(403);
-      }
+      await http_()
+        .post('/queue/q1/score')
+        .set('Authorization', api.login({ role: 'TEAM_LEADER' }))
+        .send(full)
+        .expect(403);
     });
 
     it('200: saves scores, closes the item as DONE + PENDING (attributed to the caller), writes audit rows, notifies', async () => {

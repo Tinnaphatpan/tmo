@@ -15,8 +15,13 @@ const THAI_FONT_BOLD = require.resolve(
 export interface ScoreSheetPerson {
   displayName: string;
   /** Raw image bytes — read via FileStorage by the caller, never a path
-   * pdfkit resolves itself, so this stays unit-testable with zero disk I/O. */
-  signatureImage: Buffer;
+   * pdfkit resolves itself, so this stays unit-testable with zero disk I/O.
+   * Null when this person has no signature uploaded — a pre-uploaded
+   * signature is optional for every role; the action is still fully
+   * accounted for via AuditLog, so the sheet prints a text note in place of
+   * the image rather than blocking approval on an upload nobody is required
+   * to make. */
+  signatureImage: Buffer | null;
 }
 
 export interface ScoreSheetInput {
@@ -28,6 +33,36 @@ export interface ScoreSheetInput {
   submitter: ScoreSheetPerson;
   approver: ScoreSheetPerson;
   approvedAt: Date;
+}
+
+/** Draws the uploaded signature image, or — for an ADMIN/STAFF stand-in with
+ * none on file — a dashed placeholder box noting the action is logged instead. */
+function drawSignatureOrNote(
+  doc: PDFKit.PDFDocument,
+  image: Buffer | null,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  if (image) {
+    doc.image(image, x, y, { width });
+    return;
+  }
+  doc
+    .save()
+    .dash(3, { space: 2 })
+    .rect(x, y, width, height)
+    .stroke()
+    .undash()
+    .restore();
+  doc
+    .font('Thai')
+    .fontSize(8)
+    .text('ไม่มีลายเซ็น — ดูบันทึกใน AuditLog', x, y + height / 2 - 6, {
+      width,
+      align: 'center',
+    });
 }
 
 function formatThaiDateTime(date: Date): string {
@@ -101,9 +136,10 @@ export function buildScoreSheetPdf(input: ScoreSheetInput): Promise<Buffer> {
     doc.text('กรรมการผู้ตรวจ', col.seq, y);
     doc.text('อาจารย์ผู้ควบคุมทีม', 320, y);
     y += 18;
-    doc.image(input.submitter.signatureImage, col.seq, y, { width: signatureWidth });
-    doc.image(input.approver.signatureImage, 320, y, { width: signatureWidth });
-    y += signatureWidth * 0.5 + 10;
+    const signatureHeight = signatureWidth * 0.5;
+    drawSignatureOrNote(doc, input.submitter.signatureImage, col.seq, y, signatureWidth, signatureHeight);
+    drawSignatureOrNote(doc, input.approver.signatureImage, 320, y, signatureWidth, signatureHeight);
+    y += signatureHeight + 10;
     doc
       .font('Thai')
       .text(input.submitter.displayName, col.seq, y)

@@ -82,7 +82,6 @@ describe('ManageStaffAssignmentsUseCase — assignment de-dup (SPEC-driven refac
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    // Original assignment untouched since validation ran before the write.
     expect(await assignmentRepo.findScopeByUser(id)).toEqual([
       { problemNumber: 1, schoolId: 'school-1' },
     ]);

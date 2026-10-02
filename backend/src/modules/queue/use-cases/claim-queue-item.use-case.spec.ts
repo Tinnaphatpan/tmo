@@ -113,6 +113,14 @@ describe('ClaimQueueItemUseCase', () => {
     expect(['judge-a', 'judge-b']).toContain(item?.claimedByUserId);
   });
 
+  it('isAdmin=true claims an item with no UserAssignment scope seeded at all', async () => {
+    queueRepo.seed(makeQueueItem({ id: 'q1', problemNumber: 5, schoolId: 'school-1' }));
+
+    await useCase.execute('admin-1', 'q1', true);
+
+    expect((await queueRepo.findById('q1'))?.claimedByUserId).toBe('admin-1');
+  });
+
   it('rejects with 409 while the judge’s previous score set still awaits team-leader approval', async () => {
     queueRepo.seed(makeQueueItem({ id: 'q1', problemNumber: 1 }));
     queueRepo.seed(

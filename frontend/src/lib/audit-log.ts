@@ -24,6 +24,7 @@ export const AUDIT_ACTION_OPTIONS = [
   "SCORE_CREATED",
   "SCORE_UPDATED",
   "SCORE_EDIT_APPROVED",
+  "ADMIN_SCORE_OVERRIDE",
   "USER_ROLE_CHANGED",
   "QUEUE_SCHEDULE_GENERATED",
 ] as const;
@@ -32,6 +33,7 @@ const ACTION_LABELS: Record<string, string> = {
   SCORE_CREATED: "score_saved",
   SCORE_UPDATED: "score_edited",
   SCORE_EDIT_APPROVED: "score_edit_request_approved",
+  ADMIN_SCORE_OVERRIDE: "admin_score_override",
   USER_ROLE_CHANGED: "user_role_changed",
   QUEUE_SCHEDULE_GENERATED: "generate_schedule",
   // Rows migrated from the old system use dotted lowercase names.

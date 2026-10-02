@@ -73,12 +73,18 @@ function LoginForm() {
             <span
               key={code}
               className="login-bg__logo"
-              style={{
-                left: `${left}%`,
-                top: `${top}%`,
-                rotate: `${rot}deg`,
-                animationDelay: `${-(i * 1.7)}s`,
-              }}
+              style={
+                {
+                  left: `${left}%`,
+                  top: `${top}%`,
+                  rotate: `${rot}deg`,
+                  "--dur": `${11 + ((i * 3) % 7)}s`,
+                  "--dx": `${i % 2 ? 14 : -14}px`,
+                  "--dy": `${i % 3 ? -14 : 12}px`,
+                  // drift is offset per logo; glow steps every 1.5 s across the 24 s cycle
+                  animationDelay: `${-(i * 1.7)}s, ${-(i * 1.5)}s`,
+                } as React.CSSProperties
+              }
             >
               <SchoolLogo code={code} size={size} />
             </span>

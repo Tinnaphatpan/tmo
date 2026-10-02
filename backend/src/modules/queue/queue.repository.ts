@@ -64,6 +64,9 @@ export abstract class QueueRepository {
     schoolId: string,
     executor?: Executor,
   ): Promise<QueueItemWithSchool[]>;
+  /** Every school's pending approvals — backs the ADMIN override view (admin/approvals),
+   * unlike findPendingApprovalBySchool which the TEAM_LEADER endpoint scopes to one school. */
+  abstract findAllPendingApproval(executor?: Executor): Promise<QueueItemWithSchool[]>;
   /** Overwrites only DocumentPath — used when a score revision regenerates
    * the PDF after the item was already approved (ApprovedByUserId/ApprovedAt
    * stay as the original approval's, per the confirmed no-version-history design). */
@@ -83,6 +86,12 @@ export abstract class QueueRepository {
     id: string,
     position: number,
     scheduledAt: Date,
+    executor?: Executor,
+  ): Promise<void>;
+  /** Full admin edit (SchoolId/ProblemNumber/Position/ScheduledAt) — ManageQueueUseCase.update. */
+  abstract updateDetails(
+    id: string,
+    input: { schoolId: string; problemNumber: number; position: number; scheduledAt: Date },
     executor?: Executor,
   ): Promise<void>;
   abstract delete(id: string, executor?: Executor): Promise<void>;

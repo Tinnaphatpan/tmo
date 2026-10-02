@@ -9,6 +9,7 @@ import { ScoresDataModule } from '../scores/scores-data.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AuditLogModule } from '../audit-log/audit-log.module';
 import { RealtimeModule } from '../realtime/realtime.module';
+import { ApprovalModule } from '../approval/approval.module';
 
 import { AdminSchoolsController } from './admin-schools.controller';
 import { AdminCommitteeController } from './admin-committee.controller';
@@ -33,9 +34,14 @@ import { ManageStaffAssignmentsUseCase } from './use-cases/manage-staff.use-case
 import { ListStaffUseCase } from './use-cases/list-staff.use-case';
 import { GetPermissionMatrixUseCase } from './use-cases/get-permission-matrix.use-case';
 import { GenerateQueueScheduleUseCase } from './use-cases/generate-queue-schedule.use-case';
+import { ResetQueueUseCase } from './use-cases/reset-queue.use-case';
+import { ResetQueueRepository } from './reset-queue.repository';
+import { MssqlResetQueueRepository } from './reset-queue.repository.mssql';
 import { ManageTeamLeaderUseCase } from './use-cases/manage-team-leader.use-case';
 import { ChangeUserRoleUseCase } from './use-cases/change-user-role.use-case';
+import { AdminUpdateScoreUseCase } from './use-cases/admin-update-score.use-case';
 import { AdminTeamLeadersController } from './admin-team-leaders.controller';
+import { AdminApprovalsController } from './admin-approvals.controller';
 
 @Module({
   imports: [
@@ -49,6 +55,7 @@ import { AdminTeamLeadersController } from './admin-team-leaders.controller';
     SettingsModule,
     AuditLogModule,
     RealtimeModule,
+    ApprovalModule,
   ],
   controllers: [
     AdminSchoolsController,
@@ -63,6 +70,7 @@ import { AdminTeamLeadersController } from './admin-team-leaders.controller';
     AdminStaffController,
     AdminPermissionsController,
     AdminTeamLeadersController,
+    AdminApprovalsController,
   ],
   providers: [
     ManageSchoolsUseCase,
@@ -78,6 +86,9 @@ import { AdminTeamLeadersController } from './admin-team-leaders.controller';
     ManageTeamLeaderUseCase,
     ChangeUserRoleUseCase,
     GenerateQueueScheduleUseCase,
+    { provide: ResetQueueRepository, useClass: MssqlResetQueueRepository },
+    ResetQueueUseCase,
+    AdminUpdateScoreUseCase,
   ],
 })
 export class AdminModule {}

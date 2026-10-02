@@ -116,9 +116,10 @@ describe('ApprovalController (HTTP)', () => {
     expect((await queueRepo.findById('q-other-school'))?.approvalStatus).toBe('PENDING');
   });
 
-  it('approve: 400 when a signature is missing', async () => {
+  it('approve: succeeds even with no signature on file — PDF gets a text note instead (AuditLog covers it)', async () => {
     const auth = leader({ signaturePath: null });
-    await http().post('/team-leader/approvals/q-pending/approve').set('Authorization', auth).expect(400);
+    await http().post('/team-leader/approvals/q-pending/approve').set('Authorization', auth).expect(201);
+    expect((await queueRepo.findById('q-pending'))?.approvalStatus).toBe('APPROVED');
   });
 
   it('approve: 404 unknown item', async () => {

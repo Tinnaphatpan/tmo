@@ -19,8 +19,6 @@ import { UploadSignatureUseCase } from './use-cases/upload-signature.use-case';
 import { ChangeUserRoleUseCase } from './use-cases/change-user-role.use-case';
 import { ChangeRoleDto } from './dto/change-role.dto';
 
-// Admin-only: pre-register a user's e-signature image ahead of the score
-// approval workflow (ApproveScoreSetUseCase requires one on file).
 @Controller('admin/users')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('ADMIN')

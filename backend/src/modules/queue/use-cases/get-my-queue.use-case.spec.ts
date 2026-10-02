@@ -87,6 +87,19 @@ describe('GetMyQueueUseCase', () => {
     expect(result.scoringLocked).toBe(true);
   });
 
+  it('isAdmin=true returns every item across every problem/school, unfiltered by scope', async () => {
+    const { queueRepo, useCase } = setUp();
+
+    queueRepo.seed(makeQueueItem({ id: 'q1', problemNumber: 1, schoolId: 'school-1' }));
+    queueRepo.seed(makeQueueItem({ id: 'q2', problemNumber: 4, schoolId: 'school-2' }));
+    // admin-1 has no UserAssignment rows at all
+
+    const result = await useCase.execute('admin-1', true);
+
+    expect(result.items.map((i) => i.id).sort()).toEqual(['q1', 'q2']);
+    expect(result.problemNumbers).toEqual([1, 4]);
+  });
+
   it('embeds each item’s student roster and any scores already recorded (SPEC §2.5)', async () => {
     const { queueRepo, assignmentRepo, studentsRepo, scoresRepo, useCase } = setUp();
 

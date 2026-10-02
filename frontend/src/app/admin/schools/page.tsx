@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useCallback, useEffect, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { SchoolRef } from "@/lib/types";
 
 import { useT } from "@/lib/i18n";
@@ -12,10 +13,18 @@ export default function AdminSchoolsPage() {
   const t = useT();
   const [schools, setSchools] = useState<SchoolRef[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    danger?: boolean;
+    errorFallback?: string;
+    run: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [editing, setEditing] = useState<SchoolRef | null>(null);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -35,34 +44,74 @@ export default function AdminSchoolsPage() {
     setName(school?.name ?? "");
     setCode(school?.code ?? "");
     setError(null);
+    setNotice(null);
   }
 
-  async function handleSave() {
+  // Validate -> confirm -> save -> success message, per the school-management
+  // flow diagram ("ตรวจสอบความถูกต้องของข้อมูล" -> "ยืนยันการบันทึกข้อมูล").
+  // The same form is reused for add and edit, pre-filled on edit.
+  function handleSaveClick() {
     setError(null);
-    setSaving(true);
-    try {
-      if (editing) {
-        await api.patch("/admin/schools", { id: editing.id, name, code });
-      } else {
-        await api.post("/admin/schools", { name, code });
-      }
-      startEdit(null);
-      await load();
-    } catch (err) {
-      setError(getApiErrorMessage(err, t("failed_to_save")));
-    } finally {
-      setSaving(false);
+    setNotice(null);
+    if (!name) {
+      setError(t("please_enter_a_school_name"));
+      return;
+    }
+    const codeSuffix = code ? ` (${code})` : "";
+    if (editing) {
+      setConfirmAction({
+        title: t("confirm_edit_school"),
+        message: t("confirm_edit_school_message", { name, codeSuffix }),
+        errorFallback: t("failed_to_save"),
+        run: async () => {
+          await api.patch("/admin/schools", { id: editing.id, name, code });
+          startEdit(null);
+          await load();
+          setNotice(t("school_edited_successfully"));
+        },
+      });
+    } else {
+      setConfirmAction({
+        title: t("confirm_add_school"),
+        message: t("confirm_add_school_message", { name, codeSuffix }),
+        errorFallback: t("failed_to_save"),
+        run: async () => {
+          await api.post("/admin/schools", { name, code });
+          startEdit(null);
+          await load();
+          setNotice(t("school_added_successfully"));
+        },
+      });
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm(t("delete_this_school"))) return;
+  function handleDeleteClick(school: SchoolRef) {
     setError(null);
+    setNotice(null);
+    setConfirmAction({
+      title: t("delete_this_school"),
+      message: t("confirm_delete_school_message", { name: school.name }),
+      danger: true,
+      errorFallback: t("failed_to_delete"),
+      run: async () => {
+        await api.delete("/admin/schools", { params: { id: school.id } });
+        await load();
+        setNotice(t("school_deleted_successfully"));
+      },
+    });
+  }
+
+  async function handleConfirmYes() {
+    if (!confirmAction) return;
+    setConfirmBusy(true);
     try {
-      await api.delete("/admin/schools", { params: { id } });
-      await load();
+      await confirmAction.run();
+      setConfirmAction(null);
     } catch (err) {
-      setError(getApiErrorMessage(err, t("failed_to_delete")));
+      setError(getApiErrorMessage(err, confirmAction.errorFallback ?? t("action_failed")));
+      setConfirmAction(null);
+    } finally {
+      setConfirmBusy(false);
     }
   }
 
@@ -88,7 +137,7 @@ export default function AdminSchoolsPage() {
             className="touch-target rounded-lg border border-line bg-surface px-3 py-2 text-ink-900 outline-none focus:border-saed-500"
           />
           <div className="flex gap-2">
-            <Button onClick={handleSave} disabled={saving || !name}>
+            <Button onClick={handleSaveClick} disabled={!name}>
               {editing ? t("save") : t("add")}
             </Button>
             {editing && (
@@ -99,6 +148,9 @@ export default function AdminSchoolsPage() {
           </div>
         </div>
         {error && <p className="mt-2 text-sm text-state-active-fg">{error}</p>}
+        {notice && (
+          <p className="mt-2 rounded-lg bg-state-done-bg px-3 py-2 text-sm text-state-done-fg">{notice}</p>
+        )}
       </div>
 
       <div className="card-soft overflow-x-auto p-2">
@@ -120,7 +172,7 @@ export default function AdminSchoolsPage() {
                     <Button variant="ghost" onClick={() => startEdit(school)}>
                       {t("edit")}
                     </Button>
-                    <Button variant="danger" onClick={() => handleDelete(school.id)}>
+                    <Button variant="danger" onClick={() => handleDeleteClick(school)}>
                       {t("delete")}
                     </Button>
                   </div>
@@ -130,6 +182,17 @@ export default function AdminSchoolsPage() {
           </tbody>
         </table>
       </div>
+
+      {confirmAction && (
+        <ConfirmModal
+          title={confirmAction.title}
+          message={confirmAction.message}
+          danger={confirmAction.danger}
+          busy={confirmBusy}
+          onConfirm={handleConfirmYes}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
     </div>
   );
 }

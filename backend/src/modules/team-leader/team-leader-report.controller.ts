@@ -9,9 +9,6 @@ import { GetTeamLeaderReportUseCase } from './get-team-leader-report.use-case';
 import { buildTeamLeaderReportWorkbook } from './team-leader-export.builder';
 import { contentDispositionFilename } from '../../common/csv';
 
-// SPEC §2.5 GET /api/team-leader/export (+ §5.3 /team-leader page data) — TEAM_LEADER only.
-// `user.schoolId` comes from the JWT-verified, DB-reloaded User (AuthGuard) —
-// never from a client-supplied parameter (SPEC §4.4's explicit IDOR warning).
 @Controller('team-leader')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('TEAM_LEADER')

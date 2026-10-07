@@ -1,10 +1,13 @@
 import { Role, ScoreEditRequest } from '../../domain/entities';
 import { Executor } from '../../database/types';
 
+/**
+ * The old value is not an input: it is the Score's value at request time and
+ * is recorded in the SCORE_EDIT_REQUESTED audit entry, not on this row.
+ */
 export interface CreateScoreEditRequestInput {
   scoreId: string;
   requestedBy: string;
-  oldValue: number;
   newValue: number;
   reason: string;
 }
@@ -21,7 +24,11 @@ export interface ScoreEditRequestWithContext extends ScoreEditRequest {
 }
 
 export abstract class ScoreEditRequestsRepository {
-  abstract create(input: CreateScoreEditRequestInput, executor?: Executor): Promise<ScoreEditRequest>;
+  /** Returns the row without oldValue: that is read from the audit trail, not stored here. */
+  abstract create(
+    input: CreateScoreEditRequestInput,
+    executor?: Executor,
+  ): Promise<Omit<ScoreEditRequest, 'oldValue'>>;
   abstract findById(id: string, executor?: Executor): Promise<ScoreEditRequest | null>;
   abstract findAllWithContext(executor?: Executor): Promise<ScoreEditRequestWithContext[]>;
   abstract findBySchoolWithContext(

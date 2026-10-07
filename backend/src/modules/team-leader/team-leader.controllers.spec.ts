@@ -34,7 +34,7 @@ describe('Team leader controllers (HTTP)', () => {
 
   beforeEach(async () => {
     scoresRepo = new FakeScoresRepository();
-    editRepo = new FakeScoreEditRequestsRepository();
+    editRepo = new FakeScoreEditRequestsRepository(scoresRepo);
     const queueRepo = new FakeQueueRepository();
     queueRepo.seed(makeQueueItem({ id: 'q1', schoolId: 'school-1' }));
     const schools = new FakeSchoolsRepository();
@@ -76,7 +76,6 @@ describe('Team leader controllers (HTTP)', () => {
     return editRepo.create({
       scoreId: score.id,
       requestedBy: 'judge-1',
-      oldValue: 5,
       newValue: 8,
       reason: 'นับขั้นตอนไม่ครบ',
     });

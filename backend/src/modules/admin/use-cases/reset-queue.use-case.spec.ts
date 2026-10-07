@@ -35,7 +35,7 @@ describe('ResetQueueUseCase', () => {
       entityId: 'reset',
       performedBy: 'admin-1',
     });
-    expect(JSON.parse(audit.entries[0].newValue!)).toEqual(result);
+    expect(Object.fromEntries(audit.entries[0].changes.map((c) => [c.fieldName, Number(c.newValue)]))).toEqual(result);
   });
 
   it('refuses to run when NODE_ENV=production, and performs no reset or audit write', async () => {

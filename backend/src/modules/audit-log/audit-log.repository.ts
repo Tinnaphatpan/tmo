@@ -1,13 +1,13 @@
 import * as sql from 'mssql';
-import { AuditLogEntry } from '../../domain/entities';
+import { AuditLogChange, AuditLogEntry } from '../../domain/entities';
 import { Executor } from '../../database/types';
 
 export interface CreateAuditLogInput {
   action: string;
   entityType: string;
   entityId: string;
-  oldValue: string | null;
-  newValue: string | null;
+  /** Changed fields only; every entry is one atomic old/new pair. */
+  changes: AuditLogChange[];
   performedBy: string;
 }
 

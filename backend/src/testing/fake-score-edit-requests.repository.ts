@@ -1,4 +1,5 @@
 import { ScoreEditRequest } from '../domain/entities';
+import type { FakeScoresRepository } from './fake-scores.repository';
 import {
   CreateScoreEditRequestInput,
   ScoreEditRequestsRepository,
@@ -8,12 +9,21 @@ import {
 export class FakeScoreEditRequestsRepository extends ScoreEditRequestsRepository {
   readonly requests: ScoreEditRequest[] = [];
 
+  /**
+   * `scores` supplies the old value the way the real repository derives it:
+   * the Score's value at the moment the request is made.
+   */
+  constructor(private readonly scores?: FakeScoresRepository) {
+    super();
+  }
+
   async create(input: CreateScoreEditRequestInput): Promise<ScoreEditRequest> {
+    const score = this.scores ? await this.scores.findById(input.scoreId) : null;
     const req: ScoreEditRequest = {
       id: `edit-${this.requests.length + 1}`,
       scoreId: input.scoreId,
       requestedBy: input.requestedBy,
-      oldValue: input.oldValue,
+      oldValue: score?.value ?? 0,
       newValue: input.newValue,
       reason: input.reason,
       status: 'PENDING',

@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import * as sql from 'mssql';
 import { DB_POOL } from '../../database/database.tokens';
 import { Executor, request } from '../../database/types';
-import { AuditLogEntry } from '../../domain/entities';
+import { AuditLogChange, AuditLogEntry } from '../../domain/entities';
 import {
   AuditLogContext,
   AuditLogPageQuery,
@@ -15,20 +15,24 @@ interface AuditLogRow {
   Action: string;
   EntityType: string;
   EntityId: string;
-  OldValue: string | null;
-  NewValue: string | null;
   PerformedBy: string;
   CreatedAt: Date;
 }
 
-function toEntity(row: AuditLogRow): AuditLogEntry {
+interface ChangeRow {
+  AuditLogId: string;
+  FieldName: string;
+  OldValue: string | null;
+  NewValue: string | null;
+}
+
+function toEntity(row: AuditLogRow, changes: AuditLogChange[]): AuditLogEntry {
   return {
     id: row.Id,
     action: row.Action,
     entityType: row.EntityType,
     entityId: row.EntityId,
-    oldValue: row.OldValue,
-    newValue: row.NewValue,
+    changes,
     performedBy: row.PerformedBy,
     createdAt: row.CreatedAt,
   };
@@ -41,43 +45,58 @@ export class MssqlAuditLogRepository extends AuditLogRepository {
   }
 
   async create(input: CreateAuditLogInput, tx: sql.Transaction): Promise<AuditLogEntry> {
-    const result = await request(tx)
+    const header = await request(tx)
       .input('action', sql.NVarChar, input.action)
       .input('entityType', sql.NVarChar, input.entityType)
       .input('entityId', sql.NVarChar, input.entityId)
-      .input('oldValue', sql.NVarChar(sql.MAX), input.oldValue)
-      .input('newValue', sql.NVarChar(sql.MAX), input.newValue)
       .input('performedBy', sql.UniqueIdentifier, input.performedBy)
       .query<AuditLogRow>(`
-        INSERT INTO AuditLog (Action, EntityType, EntityId, OldValue, NewValue, PerformedBy)
+        INSERT INTO AuditLog (Action, EntityType, EntityId, PerformedBy)
         OUTPUT INSERTED.Id, INSERTED.Action, INSERTED.EntityType, INSERTED.EntityId,
-               INSERTED.OldValue, INSERTED.NewValue, INSERTED.PerformedBy, INSERTED.CreatedAt
-        VALUES (@action, @entityType, @entityId, @oldValue, @newValue, @performedBy)
+               INSERTED.PerformedBy, INSERTED.CreatedAt
+        VALUES (@action, @entityType, @entityId, @performedBy)
       `);
-    return toEntity(result.recordset[0]);
+    const row = header.recordset[0];
+
+    for (const change of input.changes) {
+      await request(tx)
+        .input('auditLogId', sql.UniqueIdentifier, row.Id)
+        .input('fieldName', sql.NVarChar(50), change.fieldName)
+        .input('oldValue', sql.NVarChar(sql.MAX), change.oldValue)
+        .input('newValue', sql.NVarChar(sql.MAX), change.newValue)
+        .query(`
+          INSERT INTO AuditLogChange (AuditLogId, FieldName, OldValue, NewValue)
+          VALUES (@auditLogId, @fieldName, @oldValue, @newValue)
+        `);
+    }
+    return toEntity(row, input.changes);
   }
 
   async findAll(executor?: Executor): Promise<AuditLogEntry[]> {
-    const result = await request(executor ?? this.pool).query<AuditLogRow>(
-      'SELECT Id, Action, EntityType, EntityId, OldValue, NewValue, PerformedBy, CreatedAt FROM AuditLog ORDER BY CreatedAt DESC',
+    const ex = executor ?? this.pool;
+    const result = await request(ex).query<AuditLogRow>(
+      'SELECT Id, Action, EntityType, EntityId, PerformedBy, CreatedAt FROM AuditLog ORDER BY CreatedAt DESC',
     );
-    return result.recordset.map(toEntity);
+    const changes = await this.loadChanges(ex, result.recordset.map((r) => r.Id));
+    return result.recordset.map((row) => toEntity(row, changes.get(row.Id) ?? []));
   }
 
   async findAllWithContext(
     executor?: Executor,
   ): Promise<Array<AuditLogEntry & { performedByDisplayName: string }>> {
-    const result = await request(executor ?? this.pool).query<
+    const ex = executor ?? this.pool;
+    const result = await request(ex).query<
       AuditLogRow & { PerformedByDisplayName: string }
     >(`
-      SELECT a.Id, a.Action, a.EntityType, a.EntityId, a.OldValue, a.NewValue,
-             a.PerformedBy, a.CreatedAt, u.DisplayName AS PerformedByDisplayName
+      SELECT a.Id, a.Action, a.EntityType, a.EntityId, a.PerformedBy, a.CreatedAt,
+             u.DisplayName AS PerformedByDisplayName
       FROM AuditLog a
       JOIN [User] u ON u.Id = a.PerformedBy
       ORDER BY a.CreatedAt DESC
     `);
+    const changes = await this.loadChanges(ex, result.recordset.map((r) => r.Id));
     return result.recordset.map((row) => ({
-      ...toEntity(row),
+      ...toEntity(row, changes.get(row.Id) ?? []),
       performedByDisplayName: row.PerformedByDisplayName,
     }));
   }
@@ -124,18 +143,19 @@ export class MssqlAuditLogRepository extends AuditLogRepository {
           TargetUserName: string | null;
         }
       >(`
-        SELECT a.Id, a.Action, a.EntityType, a.EntityId, a.OldValue, a.NewValue,
-               a.PerformedBy, a.CreatedAt, u.DisplayName AS PerformedByDisplayName,
+        SELECT a.Id, a.Action, a.EntityType, a.EntityId, a.PerformedBy, a.CreatedAt,
+               u.DisplayName AS PerformedByDisplayName,
                st.Name AS StudentName, sch.Name AS SchoolName,
                qi.ProblemNumber AS ProblemNumber, tu.DisplayName AS TargetUserName
         ${from}
         ORDER BY a.CreatedAt DESC, a.Id
         OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
       `);
+    const changes = await this.loadChanges(ex, result.recordset.map((r) => r.Id));
     return {
       total: count.recordset[0].Total,
       items: result.recordset.map((row) => ({
-        ...toEntity(row),
+        ...toEntity(row, changes.get(row.Id) ?? []),
         performedByDisplayName: row.PerformedByDisplayName,
         studentName: row.StudentName,
         schoolName: row.SchoolName,
@@ -143,5 +163,32 @@ export class MssqlAuditLogRepository extends AuditLogRepository {
         targetUserName: row.TargetUserName,
       })),
     };
+  }
+
+  /**
+   * Loads the field-level changes for the given audit rows in one query and
+   * groups them by audit id. An empty id list returns nothing (no full scan).
+   */
+  private async loadChanges(
+    executor: Executor,
+    auditIds: string[],
+  ): Promise<Map<string, AuditLogChange[]>> {
+    const grouped = new Map<string, AuditLogChange[]>();
+    if (auditIds.length === 0) return grouped;
+
+    const result = await request(executor)
+      .input('ids', sql.NVarChar(sql.MAX), JSON.stringify(auditIds))
+      .query<ChangeRow>(`
+        SELECT c.AuditLogId, c.FieldName, c.OldValue, c.NewValue
+        FROM AuditLogChange c
+        WHERE c.AuditLogId IN (SELECT CAST(value AS UNIQUEIDENTIFIER) FROM OPENJSON(@ids))
+        ORDER BY c.AuditLogId, c.FieldName
+      `);
+    for (const row of result.recordset) {
+      const list = grouped.get(row.AuditLogId) ?? [];
+      list.push({ fieldName: row.FieldName, oldValue: row.OldValue, newValue: row.NewValue });
+      grouped.set(row.AuditLogId, list);
+    }
+    return grouped;
   }
 }

@@ -16,8 +16,7 @@ export class FakeAuditLogRepository extends AuditLogRepository {
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId,
-      oldValue: input.oldValue,
-      newValue: input.newValue,
+      changes: input.changes,
       performedBy: input.performedBy,
       createdAt: new Date(),
     };

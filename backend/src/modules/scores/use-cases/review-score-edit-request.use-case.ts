@@ -104,8 +104,13 @@ export class ReviewScoreEditRequestUseCase {
           action: 'SCORE_EDIT_APPROVED',
           entityType: 'Score',
           entityId: editRequest.scoreId,
-          oldValue: editRequest.oldValue.toFixed(2),
-          newValue: editRequest.newValue.toFixed(2),
+          changes: [
+            {
+              fieldName: 'value',
+              oldValue: editRequest.oldValue.toFixed(2),
+              newValue: editRequest.newValue.toFixed(2),
+            },
+          ],
           performedBy: input.reviewerId,
         },
         tx,

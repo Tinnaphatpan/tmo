@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Role } from '../../../domain/entities';
+import { AuditLogChange, Role } from '../../../domain/entities';
 import { TransactionRunner } from '../../../database/transaction-runner';
 import { AuditLogRepository } from '../../audit-log/audit-log.repository';
 import { QueueRepository } from '../../queue/queue.repository';
@@ -16,6 +16,33 @@ import {
 } from '../../user-assignment/user-assignment.repository';
 import { UsersRepository } from '../../users/users.repository';
 import { validateNoDuplicateAssignments } from './manage-staff.use-case';
+
+interface RoleState {
+  role: Role;
+  schoolId: string | null;
+  assignments: UserAssignmentScope[];
+}
+
+/**
+ * One atomic change per field (1NF). Assignments are compared entry by entry,
+ * keyed "problem:school" ("*" = all schools): an entry only before has an old
+ * value, only after has a new value, and an entry kept on both sides has both.
+ */
+function roleChanges(before: RoleState, after: RoleState): AuditLogChange[] {
+  const key = (a: UserAssignmentScope) => `${a.problemNumber}:${a.schoolId ?? '*'}`;
+  const beforeKeys = new Set(before.assignments.map(key));
+  const afterKeys = new Set(after.assignments.map(key));
+  const entries = [...new Set([...beforeKeys, ...afterKeys])].sort();
+  return [
+    { fieldName: 'role', oldValue: before.role, newValue: after.role },
+    { fieldName: 'schoolId', oldValue: before.schoolId, newValue: after.schoolId },
+    ...entries.map((k) => ({
+      fieldName: 'assignment',
+      oldValue: beforeKeys.has(k) ? k : null,
+      newValue: afterKeys.has(k) ? k : null,
+    })),
+  ];
+}
 
 export type ChangeableRole = Extract<Role, 'COMMITTEE' | 'STAFF' | 'TEAM_LEADER'>;
 
@@ -88,13 +115,12 @@ export class ChangeUserRoleUseCase {
       }
     }
 
-    const snapshot = (role: Role, sch: string | null, scope: UserAssignmentScope[]) =>
-      JSON.stringify({ role, schoolId: sch, assignments: scope });
-    const before = snapshot(
-      user.role,
-      user.schoolId,
-      await this.userAssignmentRepository.findScopeByUser(user.id),
-    );
+    const beforeState = {
+      role: user.role,
+      schoolId: user.schoolId,
+      assignments: await this.userAssignmentRepository.findScopeByUser(user.id),
+    };
+    const afterState = { role: input.role, schoolId, assignments };
 
     await this.transactionRunner.run(async (tx) => {
       await this.usersRepository.updateRoleAndSchool(user.id, input.role, schoolId, tx);
@@ -108,8 +134,7 @@ export class ChangeUserRoleUseCase {
           action: 'USER_ROLE_CHANGED',
           entityType: 'User',
           entityId: user.id,
-          oldValue: before,
-          newValue: snapshot(input.role, schoolId, assignments),
+          changes: roleChanges(beforeState, afterState),
           performedBy: input.actorId,
         },
         tx,

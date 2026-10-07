@@ -48,8 +48,9 @@ export class AdminUpdateScoreUseCase {
           action: 'ADMIN_SCORE_OVERRIDE',
           entityType: 'Score',
           entityId: input.scoreId,
-          oldValue: oldValue.toFixed(2),
-          newValue: input.value.toFixed(2),
+          changes: [
+            { fieldName: 'value', oldValue: oldValue.toFixed(2), newValue: input.value.toFixed(2) },
+          ],
           performedBy: input.adminId,
         },
         tx,

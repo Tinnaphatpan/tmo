@@ -92,7 +92,7 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
         { provide: AuditLogRepository, useValue: audit },
         { provide: SettingsRepository, useValue: settings },
         { provide: UserAssignmentRepository, useValue: assignments },
-        { provide: ScoreEditRequestsRepository, useValue: new FakeScoreEditRequestsRepository() },
+        { provide: ScoreEditRequestsRepository, useValue: new FakeScoreEditRequestsRepository(scores) },
         { provide: RealtimeService, useValue: { notifyChange, stream: EMPTY } },
         { provide: ConfigService, useValue: { get: () => 4 } },
         ManageCommitteeUseCase,
@@ -456,7 +456,8 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
 
       expect((await scores.findById('sc-1'))?.value).toBe(9);
       const entry = audit.entries.find((e) => e.entityId === 'sc-1');
-      expect(entry).toMatchObject({ action: 'ADMIN_SCORE_OVERRIDE', oldValue: '5.00', newValue: '9.00' });
+      expect(entry).toMatchObject({ action: 'ADMIN_SCORE_OVERRIDE' });
+      expect(entry?.changes).toEqual([{ fieldName: 'value', oldValue: '5.00', newValue: '9.00' }]);
     });
 
     it('PATCH /:id regenerates the PDF when the item was already approved', async () => {
@@ -535,7 +536,7 @@ describe('Remaining ADMIN controllers (HTTP)', () => {
   describe('/admin/audit-log and /admin/dashboard', () => {
     it('audit-log returns entries with the performer’s display name', async () => {
       await audit.create(
-        { action: 'SCORE_CREATED', entityType: 'Score', entityId: 'x', oldValue: null, newValue: '5.00', performedBy: 'u' },
+        { action: 'SCORE_CREATED', entityType: 'Score', entityId: 'x', changes: [{ fieldName: 'value', oldValue: null, newValue: '5.00' }], performedBy: 'u' },
         undefined as never,
       );
       const res = await http().get('/admin/audit-log').set('Authorization', admin()).expect(200);

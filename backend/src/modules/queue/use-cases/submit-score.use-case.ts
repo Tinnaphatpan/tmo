@@ -84,8 +84,13 @@ export class SubmitScoreUseCase {
             action: oldValue === null ? 'SCORE_CREATED' : 'SCORE_UPDATED',
             entityType: 'Score',
             entityId: score.id,
-            oldValue: oldValue === null ? null : oldValue.toFixed(2),
-            newValue: score.value.toFixed(2),
+            changes: [
+              {
+                fieldName: 'value',
+                oldValue: oldValue === null ? null : oldValue.toFixed(2),
+                newValue: score.value.toFixed(2),
+              },
+            ],
             performedBy: input.judgeId,
           },
           tx,

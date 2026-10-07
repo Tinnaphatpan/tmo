@@ -23,7 +23,8 @@
     "migrate:data": "ts-node -r tsconfig-paths/register src/database/migrate-data.ts",
     "prepare:test": "ts-node -r tsconfig-paths/register src/database/prepare-test-data.ts",
     "reset:test": "ts-node -r tsconfig-paths/register src/database/reset-test-run.ts",
-    "test:concurrency": "node scripts/concurrency-test.mjs"
+    "test:concurrency": "node scripts/concurrency-test.mjs",
+    "check:db": "ts-node -r tsconfig-paths/register scripts/check-db.ts"
   },
   "dependencies": {
     "@expo-google-fonts/noto-sans-thai": "^0.4.2",

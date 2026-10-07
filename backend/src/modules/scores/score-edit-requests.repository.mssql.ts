@@ -9,11 +9,12 @@ import {
   ScoreEditRequestWithContext,
 } from './score-edit-requests.repository';
 
+/** Row as stored: ScoreEditRequest no longer has an OldValue column. */
 interface Row {
   Id: string;
   ScoreId: string;
   RequestedBy: string;
-  OldValue: number;
+  OldValue: number | null;
   NewValue: number;
   Reason: string;
   Status: ScoreEditRequest['status'];
@@ -21,6 +22,24 @@ interface Row {
   ReviewedAt: Date | null;
   CreatedAt: Date;
 }
+
+/**
+ * The old value is the 'value' change of this request's SCORE_EDIT_REQUESTED
+ * audit entry (the Score's value when the request was made). Read from there,
+ * so it is never stored twice.
+ */
+const OLD_VALUE_SQL = `(
+  SELECT CAST(c.OldValue AS DECIMAL(4, 2))
+  FROM AuditLog a
+  JOIN AuditLogChange c ON c.AuditLogId = a.Id AND c.FieldName = 'value'
+  WHERE a.Action = 'SCORE_EDIT_REQUESTED'
+    AND a.EntityType = 'ScoreEditRequest'
+    AND a.EntityId = CAST(r.Id AS NVARCHAR(100))
+)`;
+
+const ROW_COLUMNS = `
+  r.Id, r.ScoreId, r.RequestedBy, ${OLD_VALUE_SQL} AS OldValue, r.NewValue, r.Reason,
+  r.Status, r.ReviewedBy, r.ReviewedAt, r.CreatedAt`;
 
 function toEntity(row: Row): ScoreEditRequest {
   return {
@@ -61,8 +80,7 @@ function toContextEntity(row: ContextRow): ScoreEditRequestWithContext {
 }
 
 const CONTEXT_SELECT = `
-  SELECT r.Id, r.ScoreId, r.RequestedBy, r.OldValue, r.NewValue, r.Reason, r.Status,
-         r.ReviewedBy, r.ReviewedAt, r.CreatedAt,
+  SELECT ${ROW_COLUMNS},
          sc.Name AS SchoolName, st.Name AS StudentName, st.StudentCode,
          q.ProblemNumber, u.DisplayName AS RequestedByDisplayName,
          u.Role AS RequestedByRole, sc.Id AS SchoolId
@@ -84,29 +102,40 @@ export class MssqlScoreEditRequestsRepository extends ScoreEditRequestsRepositor
     return executor ?? this.pool;
   }
 
-  async create(input: CreateScoreEditRequestInput, executor?: Executor): Promise<ScoreEditRequest> {
+  async create(
+    input: CreateScoreEditRequestInput,
+    executor?: Executor,
+  ): Promise<Omit<ScoreEditRequest, 'oldValue'>> {
     const result = await request(this.exec(executor))
       .input('scoreId', sql.UniqueIdentifier, input.scoreId)
       .input('requestedBy', sql.UniqueIdentifier, input.requestedBy)
-      .input('oldValue', sql.Decimal(4, 2), input.oldValue)
       .input('newValue', sql.Decimal(4, 2), input.newValue)
       .input('reason', sql.NVarChar(sql.MAX), input.reason)
-      .query<Row>(`
-        INSERT INTO ScoreEditRequest (ScoreId, RequestedBy, OldValue, NewValue, Reason)
-        OUTPUT INSERTED.Id, INSERTED.ScoreId, INSERTED.RequestedBy, INSERTED.OldValue,
+      .query<Omit<Row, 'OldValue'>>(`
+        INSERT INTO ScoreEditRequest (ScoreId, RequestedBy, NewValue, Reason)
+        OUTPUT INSERTED.Id, INSERTED.ScoreId, INSERTED.RequestedBy,
                INSERTED.NewValue, INSERTED.Reason, INSERTED.Status, INSERTED.ReviewedBy,
                INSERTED.ReviewedAt, INSERTED.CreatedAt
-        VALUES (@scoreId, @requestedBy, @oldValue, @newValue, @reason)
+        VALUES (@scoreId, @requestedBy, @newValue, @reason)
       `);
-    return toEntity(result.recordset[0]);
+    const row = result.recordset[0];
+    return {
+      id: row.Id,
+      scoreId: row.ScoreId,
+      requestedBy: row.RequestedBy,
+      newValue: Number(row.NewValue),
+      reason: row.Reason,
+      status: row.Status,
+      reviewedBy: row.ReviewedBy,
+      reviewedAt: row.ReviewedAt,
+      createdAt: row.CreatedAt,
+    };
   }
 
   async findById(id: string, executor?: Executor): Promise<ScoreEditRequest | null> {
     const result = await request(this.exec(executor))
       .input('id', sql.UniqueIdentifier, id)
-      .query<Row>(
-        'SELECT Id, ScoreId, RequestedBy, OldValue, NewValue, Reason, Status, ReviewedBy, ReviewedAt, CreatedAt FROM ScoreEditRequest WHERE Id = @id',
-      );
+      .query<Row>(`SELECT ${ROW_COLUMNS} FROM ScoreEditRequest r WHERE r.Id = @id`);
     return result.recordset[0] ? toEntity(result.recordset[0]) : null;
   }
 
@@ -138,6 +167,7 @@ export class MssqlScoreEditRequestsRepository extends ScoreEditRequestsRepositor
     reviewedBy: string,
     executor?: Executor,
   ): Promise<ScoreEditRequest> {
+    // UPDATE and the re-read share one batch so the derived OldValue comes back.
     const result = await request(this.exec(executor))
       .input('id', sql.UniqueIdentifier, id)
       .input('status', sql.VarChar, status)
@@ -145,10 +175,11 @@ export class MssqlScoreEditRequestsRepository extends ScoreEditRequestsRepositor
       .query<Row>(`
         UPDATE ScoreEditRequest
         SET Status = @status, ReviewedBy = @reviewedBy, ReviewedAt = SYSUTCDATETIME()
-        OUTPUT INSERTED.Id, INSERTED.ScoreId, INSERTED.RequestedBy, INSERTED.OldValue,
-               INSERTED.NewValue, INSERTED.Reason, INSERTED.Status, INSERTED.ReviewedBy,
-               INSERTED.ReviewedAt, INSERTED.CreatedAt
-        WHERE Id = @id
+        WHERE Id = @id;
+
+        SELECT ${ROW_COLUMNS}
+        FROM ScoreEditRequest r
+        WHERE r.Id = @id;
       `);
     return toEntity(result.recordset[0]);
   }

@@ -89,13 +89,19 @@ export interface ScoreEditRequest {
   createdAt: Date;
 }
 
+/** One changed field of an audit event. Each value is atomic (1NF). */
+export interface AuditLogChange {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
 export interface AuditLogEntry {
   id: string;
   action: string;
   entityType: string;
   entityId: string;
-  oldValue: string | null;
-  newValue: string | null;
+  changes: AuditLogChange[];
   performedBy: string;
   createdAt: Date;
 }

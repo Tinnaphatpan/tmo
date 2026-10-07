@@ -59,7 +59,12 @@ describe('GenerateQueueScheduleUseCase', () => {
       action: 'QUEUE_SCHEDULE_GENERATED',
       performedBy: 'admin',
     });
-    expect(JSON.parse(audit.entries[0].newValue!)).toMatchObject({ date: '2026-05-17', created: 80 });
+    expect(audit.entries[0].changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fieldName: 'date', newValue: '2026-05-17' }),
+        expect.objectContaining({ fieldName: 'created', newValue: '80' }),
+      ]),
+    );
   });
 
   it('reproduces the printed poster: problem 1 runs CMU, KKU, SU ... and problem 2 starts at BUU', async () => {

@@ -1,11 +1,17 @@
 import { plainT, type Tr } from "@/lib/i18n/format";
+/** One changed field of an audit event; each value is atomic. */
+export interface AuditLogChange {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
 export interface AuditLogEntry {
   id: string;
   action: string;
   entityType: string;
   entityId: string;
-  oldValue: string | null;
-  newValue: string | null;
+  changes: AuditLogChange[];
   performedByDisplayName: string;
   createdAt: string;
   studentName: string | null;
@@ -64,14 +70,8 @@ export function entityLabel(entityType: string, t: Tr = plainT): string {
   return ENTITY_LABELS[entityType] ? t(ENTITY_LABELS[entityType]) : entityType;
 }
 
-function parseJson(value: string | null): Record<string, unknown> | null {
-  if (!value) return null;
-  try {
-    const parsed: unknown = JSON.parse(value);
-    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
+function change(entry: AuditLogEntry, fieldName: string): AuditLogChange | undefined {
+  return entry.changes.find((c) => c.fieldName === fieldName);
 }
 
 function formatScore(value: string | null): string {
@@ -104,36 +104,40 @@ export function describeSubject(entry: AuditLogEntry, t: Tr = plainT): string | 
 
 /** One human-readable sentence for the change; falls back to the raw values. */
 export function describeChange(entry: AuditLogEntry, t: Tr = plainT): string | null {
-  const { oldValue, newValue } = entry;
-
   if (entry.entityType === "Score") {
-    if (oldValue === null && newValue === null) return null;
-    return oldValue === null
-      ? t("score_v", { v: formatScore(newValue) })
-      : t("score_from_to", { from: formatScore(oldValue), to: formatScore(newValue) });
+    const value = change(entry, "value");
+    if (!value || (value.oldValue === null && value.newValue === null)) return null;
+    return value.oldValue === null
+      ? t("score_v", { v: formatScore(value.newValue) })
+      : t("score_from_to", { from: formatScore(value.oldValue), to: formatScore(value.newValue) });
   }
 
   if (entry.action === "QUEUE_SCHEDULE_GENERATED") {
-    const after = parseJson(newValue);
-    if (after && typeof after.date === "string") {
+    const date = change(entry, "date")?.newValue;
+    if (date) {
       return t("generated_the_queue_schedule_for_date_create", {
-        date: formatThaiDate(after.date, t),
-        created: Number(after.created ?? 0),
-        updated: Number(after.updated ?? 0),
-        total: Number(after.total ?? 0),
+        date: formatThaiDate(date, t),
+        created: Number(change(entry, "created")?.newValue ?? 0),
+        updated: Number(change(entry, "updated")?.newValue ?? 0),
+        total: Number(change(entry, "total")?.newValue ?? 0),
       });
     }
   }
 
   if (entry.action === "USER_ROLE_CHANGED") {
-    const before = parseJson(oldValue);
-    const after = parseJson(newValue);
-    if (before && after) {
-      const role = (r: unknown) => (ROLE_LABELS[String(r)] ? t(ROLE_LABELS[String(r)]) : String(r));
-      return t("role_from_to", { from: role(before.role), to: role(after.role) });
+    const role = change(entry, "role");
+    if (role) {
+      const label = (r: string | null) =>
+        r !== null && ROLE_LABELS[r] ? t(ROLE_LABELS[r]) : (r ?? "-");
+      return t("role_from_to", { from: label(role.oldValue), to: label(role.newValue) });
     }
   }
 
-  if (oldValue === null && newValue === null) return null;
-  return `${oldValue ?? "-"} → ${newValue ?? "-"}`;
+  if (entry.changes.length === 0) return null;
+  return entry.changes
+    .map((c) => {
+      const values = `${c.oldValue ?? "-"} → ${c.newValue ?? "-"}`;
+      return entry.changes.length > 1 ? `${c.fieldName}: ${values}` : values;
+    })
+    .join(", ");
 }

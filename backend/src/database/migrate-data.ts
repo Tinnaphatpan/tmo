@@ -277,6 +277,61 @@ async function migrateSettings(
   console.log('  CompetitionSettings: 1 row (updated singleton)');
 }
 
+interface LegacyChange {
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+/**
+ * Splits a legacy audit payload into atomic field changes, matching what
+ * migration 005 does to rows already in the database: JSON objects become one
+ * change per key, the assignments array becomes one "problem:school" change
+ * per entry, and plain-text values become a single "value" change.
+ */
+function legacyChanges(oldRaw: string | null, newRaw: string | null): LegacyChange[] {
+  const asObject = (raw: string | null): Record<string, unknown> | null => {
+    if (raw === null) return null;
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  };
+  const before = asObject(oldRaw);
+  const after = asObject(newRaw);
+  if (!before && !after) {
+    return oldRaw === null && newRaw === null ? [] : [{ fieldName: 'value', oldValue: oldRaw, newValue: newRaw }];
+  }
+
+  const text = (v: unknown): string | null =>
+    v === null || v === undefined ? null : typeof v === 'object' ? JSON.stringify(v) : String(v);
+  const changes: LegacyChange[] = [];
+  const keys = new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]);
+  for (const key of keys) {
+    if (key === 'assignments') continue;
+    const o = text(before?.[key]);
+    const n = text(after?.[key]);
+    if (o !== null || n !== null) changes.push({ fieldName: key, oldValue: o, newValue: n });
+  }
+
+  type Scope = { problemNumber: number; schoolId: string | null };
+  const entryKey = (a: Scope) => `${a.problemNumber}:${a.schoolId ?? '*'}`;
+  const beforeScopes = new Set(((before?.assignments as Scope[] | undefined) ?? []).map(entryKey));
+  const afterScopes = new Set(((after?.assignments as Scope[] | undefined) ?? []).map(entryKey));
+  for (const k of [...new Set([...beforeScopes, ...afterScopes])].sort()) {
+    changes.push({
+      fieldName: 'assignment',
+      oldValue: beforeScopes.has(k) ? k : null,
+      newValue: afterScopes.has(k) ? k : null,
+    });
+  }
+  return changes;
+}
+
 async function migrateScoreEditRequests(
   pool: sql.ConnectionPool,
   block: CopyBlock | undefined,
@@ -290,24 +345,54 @@ async function migrateScoreEditRequests(
     const requestedBy = userIdMap.get(row.requestedBy!);
     if (!scoreId || !requestedBy) continue; // dangling ref to a Score not present in this dump
     const reviewedBy = row.reviewedBy ? (userIdMap.get(row.reviewedBy) ?? null) : null;
-    await pool
+    const created = await pool
       .request()
       .input('scoreId', sql.UniqueIdentifier, scoreId)
       .input('requestedBy', sql.UniqueIdentifier, requestedBy)
-      .input('oldValue', sql.Decimal(4, 2), toDecimal(row.oldValue))
       .input('newValue', sql.Decimal(4, 2), toDecimal(row.newValue))
       .input('reason', sql.NVarChar(sql.MAX), row.reason)
       .input('status', sql.VarChar, row.status)
       .input('reviewedBy', sql.UniqueIdentifier, reviewedBy)
       .input('reviewedAt', sql.DateTime2, toDate(row.reviewedAt))
       .input('createdAt', sql.DateTime2, toDate(row.createdAt))
-      .query(`
-        INSERT INTO ScoreEditRequest (ScoreId, RequestedBy, OldValue, NewValue, Reason, Status, ReviewedBy, ReviewedAt, CreatedAt)
-        VALUES (@scoreId, @requestedBy, @oldValue, @newValue, @reason, @status, @reviewedBy, @reviewedAt, @createdAt)
+      .query<{ Id: string }>(`
+        INSERT INTO ScoreEditRequest (ScoreId, RequestedBy, NewValue, Reason, Status, ReviewedBy, ReviewedAt, CreatedAt)
+        OUTPUT INSERTED.Id
+        VALUES (@scoreId, @requestedBy, @newValue, @reason, @status, @reviewedBy, @reviewedAt, @createdAt)
       `);
+    // The old value lives in the request's SCORE_EDIT_REQUESTED audit entry
+    // (see migration 005), not on the request row.
+    const audit = await pool
+      .request()
+      .input('entityId', sql.NVarChar, String(created.recordset[0].Id))
+      .input('requestedBy', sql.UniqueIdentifier, requestedBy)
+      .input('createdAt', sql.DateTime2, toDate(row.createdAt))
+      .query<{ Id: string }>(`
+        INSERT INTO AuditLog (Action, EntityType, EntityId, PerformedBy, CreatedAt)
+        OUTPUT INSERTED.Id
+        VALUES ('SCORE_EDIT_REQUESTED', 'ScoreEditRequest', @entityId, @requestedBy, @createdAt)
+      `);
+    await insertChanges(pool, audit.recordset[0].Id, [
+      { fieldName: 'value', oldValue: toDecimal(row.oldValue)?.toFixed(2) ?? null, newValue: toDecimal(row.newValue)?.toFixed(2) ?? null },
+    ]);
     count++;
   }
   console.log(`  ScoreEditRequest: ${count} rows`);
+}
+
+async function insertChanges(pool: sql.ConnectionPool, auditLogId: string, changes: LegacyChange[]) {
+  for (const change of changes) {
+    await pool
+      .request()
+      .input('auditLogId', sql.UniqueIdentifier, auditLogId)
+      .input('fieldName', sql.NVarChar(50), change.fieldName)
+      .input('oldValue', sql.NVarChar(sql.MAX), change.oldValue)
+      .input('newValue', sql.NVarChar(sql.MAX), change.newValue)
+      .query(`
+        INSERT INTO AuditLogChange (AuditLogId, FieldName, OldValue, NewValue)
+        VALUES (@auditLogId, @fieldName, @oldValue, @newValue)
+      `);
+  }
 }
 
 async function migrateAuditLog(
@@ -325,19 +410,19 @@ async function migrateAuditLog(
     // composite "studentId:queueItemId" key with no reliable 1:1 mapping to
     // a Score.id (especially when, as in this dump, Score itself is empty).
     // Left verbatim as a historical breadcrumb rather than guessed at.
-    await pool
+    const header = await pool
       .request()
       .input('action', sql.NVarChar, row.action)
       .input('entityType', sql.NVarChar, row.entityType)
       .input('entityId', sql.NVarChar, row.entityId)
-      .input('oldValue', sql.NVarChar(sql.MAX), row.oldValue)
-      .input('newValue', sql.NVarChar(sql.MAX), row.newValue)
       .input('performedBy', sql.UniqueIdentifier, performedBy)
       .input('createdAt', sql.DateTime2, toDate(row.createdAt))
-      .query(`
-        INSERT INTO AuditLog (Action, EntityType, EntityId, OldValue, NewValue, PerformedBy, CreatedAt)
-        VALUES (@action, @entityType, @entityId, @oldValue, @newValue, @performedBy, @createdAt)
+      .query<{ Id: string }>(`
+        INSERT INTO AuditLog (Action, EntityType, EntityId, PerformedBy, CreatedAt)
+        OUTPUT INSERTED.Id
+        VALUES (@action, @entityType, @entityId, @performedBy, @createdAt)
       `);
+    await insertChanges(pool, header.recordset[0].Id, legacyChanges(row.oldValue, row.newValue));
     count++;
   }
   console.log(`  AuditLog: ${count} rows`);

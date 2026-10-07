@@ -75,9 +75,10 @@ describe('ChangeUserRoleUseCase', () => {
       entityId: 'u',
       performedBy: 'actor',
     });
-    expect(JSON.parse(audit.entries[0].oldValue!)).toMatchObject({ role: 'COMMITTEE' });
-    expect(JSON.parse(audit.entries[0].oldValue!).assignments).toHaveLength(2);
-    expect(JSON.parse(audit.entries[0].newValue!)).toMatchObject({ role: 'STAFF' });
+    const changes = audit.entries[0].changes;
+    expect(changes).toContainEqual({ fieldName: 'role', oldValue: 'COMMITTEE', newValue: 'STAFF' });
+    expect(changes.filter((c) => c.fieldName === 'assignment' && c.oldValue !== null)).toHaveLength(2);
+    expect(changes.filter((c) => c.fieldName === 'assignment' && c.newValue !== null)).toHaveLength(1);
   });
 
   it('STAFF -> COMMITTEE: forces all-schools scope and de-duplicates problems', async () => {

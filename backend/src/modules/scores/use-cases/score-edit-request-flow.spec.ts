@@ -20,7 +20,7 @@ const FIXTURE_PNG = Buffer.from(
 
 function setUp() {
   const scoresRepo = new FakeScoresRepository();
-  const editRequestsRepo = new FakeScoreEditRequestsRepository();
+  const editRequestsRepo = new FakeScoreEditRequestsRepository(scoresRepo);
   const queueRepo = new FakeQueueRepository();
   const usersRepo = new FakeUsersRepository();
   const schoolsRepo = new FakeSchoolsRepository();
@@ -37,7 +37,13 @@ function setUp() {
   );
 
   const assignments = new FakeUserAssignmentRepository();
-  const createUseCase = new CreateScoreEditRequestUseCase(scoresRepo, editRequestsRepo, queueRepo);
+  const createUseCase = new CreateScoreEditRequestUseCase(
+    scoresRepo,
+    editRequestsRepo,
+    queueRepo,
+    auditLogRepo,
+    txRunner,
+  );
   const reviewUseCase = new ReviewScoreEditRequestUseCase(
     editRequestsRepo,
     scoresRepo,
@@ -95,13 +101,14 @@ describe('Score edit request flow (SPEC §8.6 last item)', () => {
 
     const updated = await scoresRepo.findById(score.id);
     expect(updated?.value).toBe(8);
-    expect(auditLogRepo.entries).toHaveLength(1);
-    expect(auditLogRepo.entries[0]).toMatchObject({
+    // Two entries: the request itself (SCORE_EDIT_REQUESTED) and the approval.
+    const approved = auditLogRepo.entries.filter((e) => e.action === 'SCORE_EDIT_APPROVED');
+    expect(approved).toHaveLength(1);
+    expect(approved[0]).toMatchObject({
       action: 'SCORE_EDIT_APPROVED',
       entityType: 'Score',
       entityId: score.id,
-      oldValue: '5.00',
-      newValue: '8.00',
+      changes: [{ fieldName: 'value', oldValue: '5.00', newValue: '8.00' }],
       performedBy: 'leader-1',
     });
   });
@@ -127,7 +134,7 @@ describe('Score edit request flow (SPEC §8.6 last item)', () => {
 
     const unchanged = await scoresRepo.findById(score.id);
     expect(unchanged?.value).toBe(5);
-    expect(auditLogRepo.entries).toHaveLength(0);
+    expect(auditLogRepo.entries.some((e) => e.action === 'SCORE_EDIT_APPROVED')).toBe(false);
   });
 
   it('rejects a second review of the same request with 409', async () => {

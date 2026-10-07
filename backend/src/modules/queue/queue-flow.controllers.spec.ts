@@ -61,7 +61,7 @@ describe('Queue / scoring / edit-request / export endpoints (HTTP)', () => {
     scores = new FakeScoresRepository();
     settings = new FakeSettingsRepository();
     assignments = new FakeUserAssignmentRepository();
-    editRequests = new FakeScoreEditRequestsRepository();
+    editRequests = new FakeScoreEditRequestsRepository(scores);
     audit = new FakeAuditLogRepository();
     const schools = new FakeSchoolsRepository();
     schools.seed({ id: 'school-1', name: 'โรงเรียน A', code: 'A' });

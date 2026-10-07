@@ -246,7 +246,7 @@ describe('GetDashboardUseCase', () => {
     users.seed(makeUser({ id: 'c2', role: 'COMMITTEE' }));
     users.seed(makeUser({ id: 'staff', role: 'STAFF' }));
     const edits = new FakeScoreEditRequestsRepository();
-    await edits.create({ scoreId: 'x', requestedBy: 'c1', oldValue: 1, newValue: 2, reason: 'r' });
+    await edits.create({ scoreId: 'x', requestedBy: 'c1', newValue: 2, reason: 'r' });
     const settings = new FakeSettingsRepository();
     settings.seed({ scoringLocked: true });
 
